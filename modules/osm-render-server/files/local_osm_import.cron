@@ -1,0 +1,4 @@
+# Managed by puppet. Do not edit manual.
+# Обновление локальной копии OSM карты:
+01 22 * * 5 root /opt/osm/scripts/full_update_local_osm_gis_east_russia.sh
+

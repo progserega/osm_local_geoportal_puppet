@@ -1,0 +1,454 @@
+#!/bin/bash
+# Managed by Puppet. Do not edit manualy.
+
+#email_success="abuse@rsprim.ru"
+#email_error_to="abuse@rsprim.ru"
+email_success="semenov@rsprim.ru"
+email_error_to="semenov@rsprim.ru"
+email_server="mail-rsprim-ru.rs.int"
+
+tmp_base="<%= @db_local_osm_tmp_name %>"
+release_base="<%= @db_local_osm_relese_name %>"
+db_user="<%= @db_user %>"
+db_host="<%= @db_host %>"
+
+
+log="/var/log/osm/local_osm_update_from_full_dump.log"
+wget_log="/var/log/osm/local_osm_update_from_full_dump-wget.log"
+osm2pgsql_log="/var/log/osm/local_osm_update_from_full_dump-osm2pg.log"
+pg_restore_log="/var/log/osm/local_osm_update_from_full_dump-pg_restore.log"
+pg_create_db_log="/var/log/osm/local_osm_update_from_full_dump-pg_create.log"
+dump="/var/spool/osm/local_osm_update/east.osm.pbf"
+tmp_dump_dir="/var/spool/osm/local_osm_update/tmp_dumps"
+pg_dump_dir="/var/spool/osm/local_osm_update/pg_dumps/"
+state_file="/var/spool/osm/local_osm_update/full_update_from_russia_backup.state"
+
+# См. названия по ссылке: http://gis-lab.info/projects/osm_dump/
+# RU-SA - Якутия
+# RU-KHA	Хабаровский край
+# RU-PRI	Приморский край
+# RU-YEV	Еврейская автономная область
+regions_to_proccess="RU-AMU RU-KHA RU-PRI RU-SA RU-YEV"
+
+
+#WGET_SPEED="30k"
+WGET_SPEED="10800k"
+# Отключаем прокси:
+#WGET_AUTH="--no-proxy"
+# Используем системные настройки:
+WGET_AUTH=""
+
+send_error()
+{
+	echo "`date +%Y.%m.%d-%T`: send_error(): ошибка при выполнении команды: ${1}" >> ${log}
+	echo "`date +%Y.%m.%d-%T`: send_error(): отправляю письмо пользователю: ${email_error_to}" >> ${log}
+	subject=`echo "OSM-сервер: ОШИБКА! Сбой обновления postgres базы ${release_base}"|base64 -w 0`
+	sendEmail -o tls=no -f osm_import@rsprim.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
+	-m "Письмо сгенерировано автоматически.
+Произошёл сбой на сервере `hostname` в подсистеме OSM. При попытке обновления базы данных postgres с именем '$release_base' 
+произошла ошибка. Задачей обновления была заливка нового дампа Openstreetmap России, для формирования подложки карты OSM, поверх
+которого рисуются данные ДРСК.
+
+======== Техническая информация: ========
+Сбой произошёл при выполнении команды: 
+${1}
+
+В обычной ситуации данная команда не должна завершаться с ошибкой. Значит на то были веские причины.
+
+Последние строки лога этого ($0) скрипта:
+`tail -n 20 ${log}`
+Последние строки лога выполнения SQL-команд:
+`tail -n 20 ${pg_create_db_log}`
+Последние строки лога загрузки дампа базы:
+`tail -n 20 ${pg_restore_log}`
+
+======== Возможный способ восстановления работоспособности базы  ======
+Перед тем как заливать дамп был сделан бэкап прошлой версии базы ${release_base} в файл:
+${release_db_file}
+
+Чтобы вручную восстановить базу, нужно выполнить следующие команды на сервере `hostname`:
+su -c \"dropdb ${release_base}\" postgres
+su -c \"createdb -E UTF8 -O openstreetmap ${release_base}\" postgres
+pg_restore -Upostgres -d ${release_base} ${release_db_file} 
+" &>> ${log}
+}
+
+postgres_run()
+{
+	db="${1}"
+	sql="${2}"
+	echo "execute: ${sql}"
+	echo "echo ${sql}|psql -U${db_user} -h ${db_host} -w ${db} &> ${pg_create_db_log}"
+	echo "${sql}"|psql -U${db_user} -h ${db_host} -w ${db} &> "${pg_create_db_log}"
+	status="$?"
+	if [ ! 0 -eq ${status} ]
+	then
+		echo "`date +%Y.%m.%d-%T`: ERROR ошибка выполнения sql-запроса: ${sql}" >> ${log}
+		tail "${pg_create_db_log}"
+		rm ${state_file}
+		return 1
+	else 
+		echo "`date +%Y.%m.%d-%T`: загрузка ${sql}, status=$status" >> ${log}
+		return 0
+	fi
+}
+
+postgres_run_file()
+{
+	db="${1}"
+	sql_file="${2}"
+	echo "execute: ${sql}"
+	echo "psql -U${db_user} -h ${db_host} -w ${db} < ${sql_file} &> ${pg_create_db_log}"
+	psql -U${db_user} -h ${db_host} -w ${db} < "${sql_file}" &> "${pg_create_db_log}"
+	status="$?"
+	if [ ! 0 -eq ${status} ]
+	then
+		echo "`date +%Y.%m.%d-%T`: ERROR ошибка выполнения sql-запросов из файла: ${sql_file}" >> ${log}
+		tail "${pg_create_db_log}"
+		rm ${state_file}
+		return 1
+	else 
+		echo "`date +%Y.%m.%d-%T`: загрузка файла ${sql_file}, status=$status" >> ${log}
+		return 0
+	fi
+}
+
+mkdir -p /var/spool/osm /var/log/osm /var/spool/osm/local_osm_update "${pg_dump_dir}"
+echo "`date +%Y.%m.%d-%T`: ##############  Start $0 ##############" >> ${log}
+
+echo "`date +%Y.%m.%d-%T`: Проверяю state file:" >> ${log}
+if [ -f "${state_file}" ]
+then
+	echo "`date +%Y.%m.%d-%T`: Статус-файл: ${state_file} существует, значит скрипт $0 или уже выполняется или предыдущий запуск завершился с ошибкой - выход" >> ${log}
+	exit 1
+else
+	echo "`date +%Y.%m.%d-%T`: Статус-файл: ${state_file} НЕ существует, значит НЕТ выполняемой копии скрипта $0. Создаю файл статуса" >> ${log}
+	touch "${state_file}"
+fi
+
+
+cat /dev/null > "${wget_log}"
+
+if [ ! -d ${tmp_dump_dir} ]
+then
+	mkdir ${tmp_dump_dir}
+else
+	rm -f ${tmp_dump_dir}/*
+fi
+
+# Скачиваем вчерашний дамп, чтобы исключить битость и недописанность:
+data="`date --date 'yesterday' +%y%m%d`"
+
+for region in $regions_to_proccess
+do
+	url_dump="http://data.gis-lab.info/osm_dump/dump/${region}/${region}-${data}.osm.pbf"
+	dump_file="${tmp_dump_dir}/${region}-${data}.osm.pbf"
+	echo "`date +%Y.%m.%d-%T`: Start wget ${region} dump: ${url_dump} (wget log: $wget_log)" >> ${log}
+
+	wget ${WGET_AUTH} -c -t 0 --limit-rate=${WGET_SPEED} "${url_dump}" -O "${dump_file}" -a "${wget_log}"
+	if [ 0 != $? ]
+	then
+		echo "`date +%Y.%m.%d-%T`: Error wget ${region} dump!" >> ${log}
+		rm "${state_file}"
+		send_error "wget ${WGET_AUTH} -c -t 0 --limit-rate=${WGET_SPEED} ${url_dump} -O $dump_file -a ${wget_log}"
+		exit 1
+	fi
+	echo "`date +%Y.%m.%d-%T`: Success wget ${region} dump" >> ${log}
+	echo "`date +%Y.%m.%d-%T`: 10 last lines from wget log:" >> ${log}
+	tail -n 10 "${wget_log}" >> "${log}"
+done
+
+first_dump=""
+tmp_result="${tmp_dump_dir}/result.osm.pbf"
+# Объединяем дампы в один:
+for f in `ls ${tmp_dump_dir}`
+do
+	if [ -z $first_dump ]
+	then
+		first_dump=${tmp_dump_dir}/$f
+		continue
+	else
+		echo "osmosis --read-pbf ${first_dump} --read-pbf ${tmp_dump_dir}/${f} --merge --write-pbf ${tmp_result}"
+		osmosis --read-pbf ${first_dump} --read-pbf ${tmp_dump_dir}/${f} --merge --write-pbf ${tmp_result}
+		if [ 0 != $? ]
+		then
+			echo "`date +%Y.%m.%d-%T`: Error osmosis merge ${first_dump} and ${tmp_dump_dir}/${f} dumps!" >> ${log}
+			rm "${state_file}"
+			send_error "osmosis --read-pbf ${first_dump} --read-pbf ${tmp_dump_dir}/${f} --merge --write-pbf ${tmp_result}"
+			exit 1
+		fi
+		mv ${tmp_result} ${dump}
+		first_dump="${dump}"
+	fi
+done
+
+echo "`date +%Y.%m.%d-%T`: Переинициализируем базу" >> ${log}
+
+# Удаляем базу:
+sql="DROP DATABASE ${tmp_base}"
+postgres_run "${release_base}" "${sql}"
+ret_status=$?
+if [ 0 != ${ret_status} ]
+then
+	send_error "postgres_run ${release_base} ${sql}"
+	exit 1
+fi
+echo "`date +%Y.%m.%d-%T`: Удаляем базу, status=$ret_status" >> ${log}
+
+# Создаём базу:
+sql="CREATE DATABASE ${tmp_base}"
+postgres_run "${release_base}" "${sql}"
+ret_status=$?
+if [ 0 != ${ret_status} ]
+then
+	send_error "postgres_run ${release_base} ${sql}"
+	exit 1
+fi
+echo "`date +%Y.%m.%d-%T`: Создаём базу, status=$status" >> ${log}
+
+# Включаем для неё расширение postgis:
+sql="CREATE LANGUAGE plpgsql"
+postgres_run "${tmp_base}" "${sql}"
+ret_status=$?
+if [ 0 != ${ret_status} ]
+then
+	send_error "postgres_run ${tmp_base} ${sql}"
+	exit 1
+fi
+echo "`date +%Y.%m.%d-%T`: Включаем postgis, status=$ret_status" >> ${log}
+
+sql="CREATE EXTENSION hstore"
+postgres_run "${tmp_base}" "${sql}"
+ret_status=$?
+if [ 0 != ${ret_status} ]
+then
+	send_error "postgres_run ${tmp_base} ${sql}"
+	exit 1
+fi
+echo "`date +%Y.%m.%d-%T`: Включаем hstore, status=$ret_status" >> ${log}
+
+sql="CREATE EXTENSION dict_int"
+postgres_run "${tmp_base}" "${sql}"
+ret_status=$?
+if [ 0 != ${ret_status} ]
+then
+	send_error "postgres_run ${tmp_base} ${sql}"
+	exit 1
+fi
+echo "`date +%Y.%m.%d-%T`: Включаем dict_int, status=$ret_status" >> ${log}
+
+
+# Инициируем базу:
+echo "`date +%Y.%m.%d-%T`: Инициируем базу:" >> ${log}
+shemas="/usr/share/postgresql/9.1/contrib/postgis-1.5/postgis.sql \
+/usr/share/postgresql/9.1/contrib/postgis-1.5/spatial_ref_sys.sql"
+
+#shemas="/usr/share/postgresql-9.0/contrib/hstore.sql \
+#/usr/share/postgresql-9.0/contrib/_int.sql \
+#/usr/share/postgresql-9.0/contrib/postgis-1.5/postgis.sql \
+#/usr/share/postgresql-9.0/contrib/postgis-1.5/spatial_ref_sys.sql \
+#/opt/osm/osmosis-0.39/script/pgsnapshot_schema_0.6.sql \
+#/opt/osm/osmosis-0.39/script/pgsnapshot_schema_0.6_action.sql \
+#/opt/osm/osmosis-0.39/script/pgsnapshot_schema_0.6_bbox.sql \
+#/opt/osm/osmosis-0.39/script/pgsnapshot_schema_0.6_linestring.sql
+#"
+
+for sql in ${shemas}
+do
+	postgres_run_file "${tmp_base}" "${sql}"
+	ret_status=$?
+	if [ ! 0 -eq ${ret_status} ]
+	then
+		echo "`date +%Y.%m.%d-%T`: ERROR ошибка загрузки sql-схемы: ${sql} в базу ${tmp_base} с помощью psql, status=${ret_status}" >> ${log}
+		rm ${state_file}
+		send_error "postgres_run_file ${tmp_base} ${sql}"
+		exit 1
+	else 
+		echo "`date +%Y.%m.%d-%T`: загрузка ${sql}, status=$ret_status" >> ${log}
+	fi
+done
+
+
+sql="ALTER TABLE geometry_columns OWNER TO ${db_user}; ALTER TABLE spatial_ref_sys OWNER TO ${db_user};"
+postgres_run "${tmp_base}" "${sql}"
+ret_status=$?
+if [ 0 != ${ret_status} ]
+then
+	send_error "postgres_run ${tmp_base} ${sql}"
+	exit 1
+fi
+echo "`date +%Y.%m.%d-%T`: Даём права на базу ${tmp_base} пользователю ${db_user}, status=$ret_status" >> ${log}
+
+
+# Загрузка данных в gis-базу:
+
+echo "`date +%Y.%m.%d-%T`: Загрузка данных в gis-базу ${tmp_base} с помощью osm2pgsql" >> ${log}
+echo "osm2pgsql --style /usr/share/osm2pgsql/default.style --create --database ${tmp_base} --username ${db_user} --prefix planet_osm --slim --cache 2048 --hstore $dump"
+# Отключаем SSL, т.к. на больших файлах дампа почему-то ошибка SSL появляется:
+PGSSLMODE="disable" osm2pgsql --style /usr/share/osm2pgsql/default.style --create --database ${tmp_base} --username ${db_user} -H ${db_host} --prefix planet_osm --slim --cache 2048 --hstore "$dump" &>> ${osm2pgsql_log}
+
+if [ ! 0 -eq $? ]
+then
+	echo "`date +%Y.%m.%d-%T`: ERROR ошибка загрузки дампа в базу ${tmp_base} с помощью osm2pgsql. Выход." >> ${log}
+	rm ${state_file}
+	send_error "osm2pgsql --style /usr/share/osm2pgsql/default.style --create --database ${tmp_base} --username ${db_user} -H ${db_host} --prefix planet_osm --slim --cache 2048 --hstore $dump &>> ${osm2pgsql_log}"
+	exit 1
+else
+	echo "`date +%Y.%m.%d-%T`: SUCCESS  успешно загрузил дамп России в базу ${tmp_base} с помощью osm2pgsql" >> ${log}
+fi
+
+# Очищаем прошлые дампы баз:
+echo "`date +%Y.%m.%d-%T`: Создаём ${pg_dump_dir}, удаляем старые дампы:" >> ${log}
+mkdir -p "${pg_dump_dir}" &>> "${log}"
+rm -vf ${pg_dump_dir}/* &>> "${log}"
+
+# Делаем бэкап тестовой базы:
+
+tmp_db_file=`mktemp ${pg_dump_dir}/${tmp_base}.db.XXXXX`
+
+echo "`date +%Y.%m.%d-%T`: Делаем бэкап базы ${tmp_base} в файл '${tmp_db_file}'" >> ${log}
+pg_dump -F c -b -f ${tmp_db_file} -U${db_user} -h ${db_host} -w ${tmp_base} 
+if [ ! 0 -eq $? ]
+then
+		echo "`date +%Y.%m.%d-%T`: ERROR ошибка выгрузки текущей базы ${tmp_base} в файл ${tmp_db_file}" >> ${log}
+		rm ${state_file}
+		send_error "pg_dump -F c -b -f ${tmp_db_file} -U${db_user} -h ${db_host} -w ${tmp_base}"
+		exit 1
+else
+		echo "`date +%Y.%m.%d-%T`: успешно выгрузил текущую базу ${tmp_base}" >> ${log}
+fi
+
+# ======== Заливка в реальную базу =====
+
+# Делаем бэкап реальной базы на всякий случай:
+mkdir -p "${pg_dump_dir}"
+#rm -f ${pg_dump_dir}/*
+release_db_file=`mktemp ${pg_dump_dir}/${release_base}.db.XXXXX`
+
+echo "`date +%Y.%m.%d-%T`: Делаем бэкап базы ${release_base} в файл '${release_db_file}'" >> ${log}
+pg_dump -F c -b -f ${release_db_file} -U${db_user} -h ${db_host} -w ${release_base} 
+if [ ! 0 -eq $? ]
+then
+		echo "`date +%Y.%m.%d-%T`: ERROR ошибка выгрузки текущей базы ${release_base} в файл ${release_db_file}" >> ${log}
+		rm ${state_file}
+		send_error "pg_dump -F c -b -f ${release_db_file} -U${db_user} -h ${db_host} -w ${release_base}"
+		exit 1
+else
+		echo "`date +%Y.%m.%d-%T`: успешно выгрузил текущую базу ${release_base}" >> ${log}
+fi
+
+
+# Заливаем в реальную базу дамп тестовой:
+echo "`date +%Y.%m.%d-%T`: Останавливаем клиентов базы: renderd, tilecache" >> ${log}
+/etc/init.d/renderd stop
+/etc/init.d/apache2 stop
+
+# Удаляем базу:
+sql="DROP DATABASE ${release_base}"
+postgres_run "${tmp_base}" "${sql}"
+ret_status=$?
+if [ 0 != ${ret_status} ]
+then
+	send_error "postgres_run ${tmp_base} ${sql}"
+	exit 1
+fi
+echo "`date +%Y.%m.%d-%T`: Удаляем базу ${release_base}, status=$ret_status" >> ${log}
+
+# Создаём базу:
+sql="CREATE DATABASE ${release_base}"
+postgres_run "${tmp_base}" "${sql}"
+ret_status=$?
+if [ 0 != ${ret_status} ]
+then
+	send_error "postgres_run ${tmp_base} ${sql}"
+	exit 1
+fi
+echo "`date +%Y.%m.%d-%T`: Создаём базу ${release_base}, status=$ret_status" >> ${log}
+
+pg_restore -d ${release_base} -U${db_user} -h ${db_host} -w ${tmp_db_file} &> ${pg_restore_log}
+
+if [ ! 0 -eq $? ]
+then
+	echo "`date +%Y.%m.%d-%T`: ERROR ошибка восстановления текущей базы ${release_base} из бэкапа '${tmp_db_file}'" >> ${log}
+	
+	echo "`date +%Y.%m.%d-%T`: Запускаю apache и renderd:" >> ${log}
+	/etc/init.d/renderd restart
+	sleep 3
+	/etc/init.d/apache2 restart
+
+	subject=`echo "OSM-сервер: ОШИБКА! Сбой обновления postgres базы ${release_base}"|base64 -w 0`
+	sendEmail -o tls=no -f osm_import@rsprim.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
+	-m "Письмо сгенерировано автоматически.
+Произошёл сбой на сервере `hostname` в подсистеме OSM. При попытке обновления базы данных postgres с именем '$release_base' 
+произошла ошибка. Задачей обновления была заливка нового дампа Openstreetmap России, для формирования подложки карты OSM, поверх
+которого рисуются данные ДРСК.
+
+======== Техническая информация: ========
+Сбой произошёл при выполнении команды: 
+pg_restore -Upostgres -d ${release_base} ${tmp_db_file}
+
+В обычной ситуации данная команда не должна завершаться с ошибкой. Значит на то были веские причины.
+
+Последние строки лога этого ($0) скрипта:
+`tail -n 20 ${log}`
+Последние строки лога загрузки дампа базы:
+`tail -n 20 ${pg_restore_log}`
+
+======== Способ восстановления работоспособности базы ======
+Перед тем как заливать дамп был сделан бэкап прошлой версии базы ${release_base} в файл:
+${release_db_file}
+
+Чтобы вручную восстановить базу, нужно выполнить следующие команды на сервере `hostname`:
+su -c \"dropdb ${release_base}\" postgres
+su -c \"createdb -E UTF8 -O openstreetmap ${release_base}\" postgres
+pg_restore -Upostgres -d ${release_base} ${release_db_file} 
+" &>> ${log}
+	exit 1
+else
+	echo "`date +%Y.%m.%d-%T`: успешно загрузил текущую базу ${release_base} из файла бэкапа '${tmp_db_file}', содержащий свежий дамп России" >> ${log}
+	subject=`echo "OSM-сервер: УСПЕШНО завершено обновление базы данных ${release_base} из дампа Openstreetmap России"|base64 -w 0`
+
+	sendEmail  -o tls=no -f osm_import@rsprim.ru -o message-charset=utf-8 -t "${email_success}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
+	-m "Письмо сгенерировано автоматически.
+Сегодня была успешно обновлена база ${release_base} из дампа OSM России: ${url_dump}.
+Дамп был успешно сконвертирован в базу postgis и загружен в базу ${release_base}.
+Подложка OSM, поверх которой рисуются данные ДРСК теперь содержит свежие картографические данные.
+" &>> ${log}
+fi
+
+echo "`date +%Y.%m.%d-%T`: Запускаю apache и renderd:" >> ${log}
+/etc/init.d/renderd restart
+sleep 3
+/etc/init.d/apache2 restart
+
+
+echo "`date +%Y.%m.%d-%T`: Время создания этого файла отслеживается render_old и перегенерируется по изменениям." >> ${log}
+touch /var/lib/mod_tile/planet-import-complete
+
+#start_render_date="`date +%Y.%m.%d-%T`"
+#echo "$start_render_date: Обновляем тайлы:" >> ${log}
+
+# Иногда рендер притупляет, наверно из-за проблем с обновляемой на-лету базой. Перезагружаем его:
+#/etc/init.d/mod_tile-render restart
+
+# Отключил суровое обновление всех тайлов:
+#/opt/osm/mod_tile/render_old -s /var/run/renderd/renderd.sock -c /etc/renderd.conf
+#echo "`date +%Y.%m.%d-%T`: Закончил обновление тайлов, начатое в: $start_render_date " >> ${log}
+
+#echo "`date +%Y.%m.%d-%T`: Удаляем временный файл бэкап текущей базы ${tmp_base} '${db_file}" >> ${log}
+#rm ${db_file}
+
+echo "`date +%Y.%m.%d-%T`: удаляем статус-файл: ${state_file}" >> ${log}
+rm "${state_file}"
+
+subject=`echo "OSM-сервер: УСПЕШНОЕ обновление postgres базы ${release_base} из дампа OSM России"|base64 -w 0`
+sendEmail  -o tls=no -f osm_import@rsprim.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
+-m "Письмо сгенерировано автоматически.
+Успешно загрузил дамп России в локальную базу-копию OSM.
+
+Последние строки лога этого ($0) скрипта:
+`tail -n 20 ${log}`
+"
+echo "`date +%Y.%m.%d-%T`: ==============  Успешное завершение работы скрипта $0  ====================" >> ${log}
+
+exit 0

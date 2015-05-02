@@ -1,0 +1,107 @@
+#!/bin/bash
+
+corp_base="<%= @db_corp_name %>"
+db_user="<%= @db_user %>"
+db_host="<%= @db_host %>"
+
+email_success="abuse@rsprim.ru"
+email_error_to="abuse@rsprim.ru"
+email_server="mail-rsprim-ru.rs.int"
+
+log="/var/log/osm/openstreetmap2drsk_gis.log"
+var_dir="/var/spool/osm/drsk_gis_update/"
+diff_api_changes="${var_dir}/diff_api_changes.osc"
+need_to_render="${var_dir}/tiles_to_render.list"
+need_to_render_old="${var_dir}/tiles_to_render.list_old"
+style="/opt/osm/drsk_osm_map_styles/osm2pgsql_styles/drsk.style"
+diff_url="http://export.osm.prim.drsk.ru/diff/diff_api_changes_latest.osc"
+
+send_error()
+{
+	echo "`date +%Y.%m.%d-%T`: send_error(): ошибка при выполнении команды: ${1}" >> ${log}
+	echo "`date +%Y.%m.%d-%T`: send_error(): отправляю письмо пользователю: ${email_error_to}" >> ${log}
+	subject=`echo "OSM-сервер: ОШИБКА! Сбой обновления postgres базы ${corp_base}"|base64 -w 0`
+	sendEmail -o tls=no -f osm_import@rsprim.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
+	-m "Письмо сгенерировано автоматически.
+Произошёл сбой на сервере `hostname` в подсистеме OSM. При попытке обновления базы данных postgres с именем '$corp_base' 
+произошла ошибка. Задачей обновления была миграция изменений из основной OSM-базы ДРСК в postgis базу ДРСК для отрисовки слоёв.
+
+======== Техническая информация: ========
+Сбой произошёл при выполнении команды: 
+${1}
+
+В обычной ситуации данная команда не должна завершаться с ошибкой. Значит на то были веские причины.
+
+Последние строки лога этого ($0) скрипта:
+`tail -n 20 ${log}`
+" &>> ${log}
+}
+
+echo "`date +%Y.%m.%d-%T`: ============ Начал  выполнение скрипта $0 ==========" >> ${log}
+
+if [ ! -d ${var_dir} ]
+then
+	mkdir -p ${var_dir}
+fi
+
+# Скачиваем diff-файл:
+wget ${diff_url} -O "${diff_api_changes}"
+if [ 0 != $? ]
+then
+	echo "`date +%Y.%m.%d-%T`: ошибка загрузки ${diff_url}" >> ${log}
+	send_error "wget ${diff_url} -O ${diff_api_changes}"
+	exit 1
+fi
+
+echo "`date +%Y.%m.%d-%T`: Размер файла изменений: `cat ${diff_api_changes}|wc -l` строк" >> ${log}
+
+echo "`date +%Y.%m.%d-%T`: Вносим изменения в базу:" >> ${log}
+osm2pgsql --append --style ${style} --database ${corp_base} --username ${db_user} -H ${db_host} --prefix planet_osm --slim --cache 2048 --hstore ${diff_api_changes}  &>> ${log}
+if [ 0 != $? ]
+then
+	echo "`date +%Y.%m.%d-%T`: ошибка применения изменений к базе ${corp_base} из файла ${diff_url}" >> ${log}
+	send_error "osm2pgsql --append --style ${style} --database ${corp_base} --username ${db_user} -H ${db_host} --prefix planet_osm --slim --cache 2048 --hstore ${diff_api_changes}  &>> ${log}"
+	exit 1
+fi
+
+echo "`date +%Y.%m.%d-%T`: Формируем список тайлов на отрисовку:" >> ${log}
+cat /dev/null > ${need_to_render}
+# Почему-то диапазон не работает, потому создаём список для всех масштабов:
+for ((zoom=2;zoom<19;zoom++))
+do
+	osm2pgsql --style ${style} --database ${corp_base} -H ${db_host} --username ${db_user} --prefix planet_osm  -a --slim -e ${zoom} -o ${need_to_render} ${diff_api_changes}
+	if [ 0 != $? ]
+	then
+		echo "`date +%Y.%m.%d-%T`: ошибка расчёта списка изменившихся тайлов" >> ${log}
+		send_error "osm2pgsql --style ${style} --database ${corp_base} -H ${db_host} --username ${db_user} --prefix planet_osm  -a --slim -e ${zoom} -o ${need_to_render} ${diff_api_changes}"
+		exit 1
+	fi
+	echo "`date +%Y.%m.%d-%T`: сгенерировали список тайлов для масштаба $zoom, код выполнения: $?" >> ${log}
+done
+cat ${need_to_render} >> ${log}
+
+#date +%d/%m/%y > timestamp_migration
+
+#start_render_date="`date +%Y.%m.%d-%T`"
+echo "$start_render_date: Обновляем тайлы:" >> ${log}
+
+#/opt/osm/mod_tile/render_old --min-zoom=10 --max-zoom=18 -s /var/run/renderd/renderd.sock < ${need_to_render}
+#/opt/osm/mod_tile/render_expired --min-zoom=0 --max-zoom=18 -m drsk_gis --touch-from=10 -s /var/run/renderd/renderd.sock < ${need_to_render}
+#/opt/osm/mod_tile/render_expired --min-zoom=10 --max-zoom=18 -m drsk_gis --touch-from=10 -s /var/run/renderd/renderd.sock < ${need_to_render}
+# На данный момент данные ДРСК рисуются не с помощью mod_tile:
+#/opt/osm/mod_tile/render_expired --min-zoom=10 --max-zoom=18 -m drsk_gis --delete-from=10 -s /var/run/renderd/renderd.sock < ${need_to_render} >> ${log}
+# На данный момент данные ДРСК рисуются с помощью tilecache:
+
+tilecache_dir_to_update="`find /var/tilecache/ -maxdepth 1|tail -n+2`"
+
+for dir in ${tilecache_dir_to_update}
+do
+	echo "`date +%Y.%m.%d-%T`: Очищаем устаревшие тайлы для директории $dir:" >> ${log}
+	echo "выполняю команду: /opt/osm/scripts/expire-tilecache-disk.pl ${need_to_render} ${dir}"  >> ${log}
+	/opt/osm/scripts/expire-tilecache-disk.pl ${need_to_render} ${dir} >> ${log}
+done
+
+mv ${need_to_render} ${need_to_render_old}
+#/opt/osm/mod_tile/render_old -c /etc/renderd.conf  &>> ${log}
+
+echo "`date +%Y.%m.%d-%T`: Закончил выполнение скрипта $0" >> ${log}

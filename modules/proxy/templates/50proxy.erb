@@ -1,0 +1,4 @@
+# File managed by puppet
+Acquire::http::Proxy "http://<%= @host %>:<%= @port %>";
+Acquire::ftp::Proxy "ftp://<%= @host %>:<%= @port %>";
+Acquire::http::Timeout "120";

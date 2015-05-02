@@ -1,0 +1,12 @@
+diff -ruN TileCache.orig/Layers/Mapnik.py TileCache/Layers/Mapnik.py
+--- TileCache.orig/Layers/Mapnik.py	2010-10-15 22:00:18.000000000 +1100
++++ TileCache/Layers/Mapnik.py	2015-04-24 08:19:06.000000000 +1000
+@@ -24,7 +24,7 @@
+             self.fonts = []
+             
+     def renderTile(self, tile):
+-        import mapnik
++        import mapnik2 as mapnik
+         
+         if self.mapnik:
+             m = self.mapnik

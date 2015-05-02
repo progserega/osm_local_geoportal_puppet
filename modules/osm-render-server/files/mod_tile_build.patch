@@ -1,0 +1,50 @@
+diff -ruN mod_tile.orig/debian/control mod_tile/debian/control
+--- mod_tile.orig/debian/control	2015-04-17 12:58:20.000000000 +1000
++++ mod_tile/debian/control	2015-04-17 13:15:12.000000000 +1000
+@@ -2,7 +2,7 @@
+ Section: utils
+ Priority: optional
+ Maintainer: Frederik Ramm <frederik@remote.org>
+-Build-Depends: debhelper (>= 7), apache2-dev (>= 2.4.0), libmapnik-dev | libmapnik2-dev, autoconf, automake, m4, libtool
++Build-Depends: debhelper (>= 7), apache2-prefork-dev | apache2-threaded-dev, libmapnik-dev | libmapnik2-dev, autoconf, automake, m4, libtool
+ Standards-Version: 3.9.3
+ 
+ Package: libapache2-mod-tile
+diff -ruN mod_tile.orig/debian/libapache2-mod-tile.postinst mod_tile/debian/libapache2-mod-tile.postinst
+--- mod_tile.orig/debian/libapache2-mod-tile.postinst	2015-04-17 12:58:20.000000000 +1000
++++ mod_tile/debian/libapache2-mod-tile.postinst	2015-04-17 13:15:12.000000000 +1000
+@@ -15,7 +15,7 @@
+         ENABLE_SITE=$RET
+         db_stop
+         if [ "x$ENABLE_SITE" = "xtrue" ] ; then
+-            a2ensite tileserver_site
++            a2ensite tileserver_site.conf
+             a2dissite 000-default
+         fi
+     fi
+diff -ruN mod_tile.orig/debian/libapache2-mod-tile.prerm mod_tile/debian/libapache2-mod-tile.prerm
+--- mod_tile.orig/debian/libapache2-mod-tile.prerm	2015-04-17 12:58:20.000000000 +1000
++++ mod_tile/debian/libapache2-mod-tile.prerm	2015-04-17 13:16:05.000000000 +1000
+@@ -2,7 +2,7 @@
+ set -e
+ 
+ if [ "$1" = remove ] ; then
+-    a2dissite tileserver_site || true
++    a2dissite tileserver_site.conf || true
+     a2ensite 000-default || true
+     a2dismod -q -f tile || true
+     invoke-rc.d apache2 restart || true
+diff -ruN mod_tile.orig/m4/ax_lib_mapnik.m4 mod_tile/m4/ax_lib_mapnik.m4
+--- mod_tile.orig/m4/ax_lib_mapnik.m4	2015-04-17 12:58:20.000000000 +1000
++++ mod_tile/m4/ax_lib_mapnik.m4	2015-04-17 13:15:12.000000000 +1000
+@@ -90,8 +90,9 @@
+                 MAPNIK_INCLUDES="`$MAPNIK_CONFIG --includes`"
+                 if test $? -ne 0; then
+                     MAPNIK_INCLUDES=""
+-                fi
++                else
+                     MAPNIK_INCLUDES="$MAPNIK_INCLUDES `$MAPNIK_CONFIG --dep-includes`"
++				fi
+         	    MAPNIK_LDFLAGS="`$MAPNIK_CONFIG --libs`"
+ 
+         	    MAPNIK_VERSION=`$MAPNIK_CONFIG --version`

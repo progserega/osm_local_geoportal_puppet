@@ -1,0 +1,82 @@
+diff -ruN kothic.orig/src/komap.conf kothic/src/komap.conf
+--- kothic.orig/src/komap.conf	2015-04-21 13:29:20.000000000 +1000
++++ kothic/src/komap.conf	2015-04-21 16:07:11.000000000 +1000
+@@ -4,6 +4,9 @@
+ table_prefix = planet_osm_
+ db_user = gis
+ db_name = gis
++db_passwd = XXXXXX
++db_host = localhost
++db_port = 5432
+ db_srid = 900913
+ icons_path = /home/gis/mapnik/kosmo/icons/
+ world_bnd_path = /home/gis/mapnik/world_boundaries/
+@@ -13,4 +16,4 @@
+ srtm_hs_path = /raid/srtm/srtmhs.vrt
+ default_font_family = DejaVu Sans Book
+ max_char_angle_delta = 17
+-font_tracking = 0
+\ No newline at end of file
++font_tracking = 0
+diff -ruN kothic.orig/src/komap.py kothic/src/komap.py
+--- kothic.orig/src/komap.py	2015-04-21 13:29:20.000000000 +1000
++++ kothic/src/komap.py	2015-04-21 16:07:11.000000000 +1000
+@@ -116,6 +116,9 @@
+     libkomapnik.table_prefix = config.get("mapnik", "table_prefix")
+     libkomapnik.db_user = config.get("mapnik", "db_user")
+     libkomapnik.db_name = config.get("mapnik", "db_name")
++    libkomapnik.db_passwd = config.get("mapnik", "db_passwd")
++    libkomapnik.db_host = config.get("mapnik", "db_host")
++    libkomapnik.db_port = config.get("mapnik", "db_port")
+     libkomapnik.db_srid = config.get("mapnik", "db_srid")
+     libkomapnik.icons_path = config.get("mapnik", "icons_path")
+     libkomapnik.world_bnd_path = config.get("mapnik", "world_bnd_path")
+diff -ruN kothic.orig/src/libkomapnik.py kothic/src/libkomapnik.py
+--- kothic.orig/src/libkomapnik.py	2015-04-21 13:29:20.000000000 +1000
++++ kothic/src/libkomapnik.py	2015-04-21 16:08:48.000000000 +1000
+@@ -28,6 +28,9 @@
+ table_prefix = ""
+ db_user = ""
+ db_name = ""
++db_passwd = ""
++db_host = ""
++db_port = ""
+ db_srid = ""
+ icons_path = ""
+ world_bnd_path = ""
+@@ -350,13 +353,16 @@
+             <Parameter name="st_prefix">true</Parameter>
+             <Parameter name="user">%s</Parameter>
+             <Parameter name="dbname">%s</Parameter>
++			<Parameter name="password">%s</Parameter>
++			<Parameter name="host">%s</Parameter>
++			<Parameter name="port">%s</Parameter>
+             <Parameter name="srid">%s</Parameter>
+             <Parameter name="geometry_field">way</Parameter>
+             <Parameter name="geometry_table">%s%s</Parameter>
+             <Parameter name="estimate_extent">false</Parameter>
+             <Parameter name="extent">-20037508.342789244, -20037508.342780735, 20037508.342789244, 20037508.342780709</Parameter>
+           </Datasource>
+-        </Layer>""" % (layer_id, db_proj, subs, zoom, interesting_tags, waystring, table_prefix, geom, sql, intersection_SQL, db_user, db_name, db_srid,  table_prefix, geom)
++        </Layer>""" % (layer_id, db_proj, subs, zoom, interesting_tags, waystring, table_prefix, geom, sql, intersection_SQL, db_user, db_name, db_passwd, db_host, db_port, db_srid,  table_prefix, geom)
+     elif type == "postgis-process":
+         return """
+         <Layer name="l%s" status="on" srs="%s">
+@@ -372,13 +378,16 @@
+             <Parameter name="st_prefix">true</Parameter>
+             <Parameter name="user">%s</Parameter>
+             <Parameter name="dbname">%s</Parameter>
++			<Parameter name="password">%s</Parameter>
++			<Parameter name="host">%s</Parameter>
++			<Parameter name="port">%s</Parameter>
+             <Parameter name="srid">%s</Parameter>
+             <Parameter name="geometry_field">way</Parameter>
+             <Parameter name="geometry_table">%s%s</Parameter>
+             <Parameter name="estimate_extent">false</Parameter>
+             <Parameter name="extent">-20037508.342789244, -20037508.342780735, 20037508.342789244, 20037508.342780709</Parameter>
+           </Datasource>
+-        </Layer>""" % (layer_id, db_proj, subs, zoom, sql, intersection_SQL, db_user, db_name, db_srid,  table_prefix, geom)
++        </Layer>""" % (layer_id, db_proj, subs, zoom, sql, intersection_SQL, db_user, db_name, db_passwd, db_host, db_port, db_srid,  table_prefix, geom)
+     elif type == "coast":
+         if zoom < 9:
+             return """

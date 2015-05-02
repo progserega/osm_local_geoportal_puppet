@@ -1,0 +1,19 @@
+[mapnik]
+map_proj = +init=epsg:3857
+db_proj = +init=epsg:3857
+table_prefix = planet_osm_
+db_user = <%= @db_user %>
+db_name = <%= @db_corp_name %>
+db_passwd = <%= @db_passwd %>
+db_host = <%= @db_host %>
+db_port = <%= @db_port %>
+db_srid = 900913
+icons_path = /opt/osm/drsk_osm_map_styles/icons/
+world_bnd_path = /opt/osm/world_boundaries/world_boundaries/
+cleantopo_dem_path = /raid/srtm/Full/CleanTOPO2merc.tif
+srtm_dem_path = /raid/srtm/srtmm.vrt
+cleantopo_hs_path = /raid/srtm/Full/CleanTOPO2merchs.tif
+srtm_hs_path = /raid/srtm/srtmhs.vrt
+default_font_family = DejaVu Sans Book
+max_char_angle_delta = 17
+font_tracking = 0

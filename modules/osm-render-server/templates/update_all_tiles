@@ -1,0 +1,13 @@
+#!/bin/bash
+
+log="/var/log/osm/update_all_tiles.log"
+
+echo "`date +%Y.%m.%d-%T`: Время создания этого файла отслеживается render_old и перегенерируется по изменениям." >> ${log}
+touch /var/lib/mod_tile/planet-import-complete
+
+start_render_date="`date +%Y.%m.%d-%T`"
+echo "$start_render_date: Обновляем тайлы:" >> ${log}
+
+# -l 3 - нагружать систему не более чем до 3 ожидающих процессов
+/opt/osm/mod_tile/render_old -l 3 -s /var/run/renderd/renderd.sock -c /etc/renderd.conf
+echo "`date +%Y.%m.%d-%T`: Закончил обновление тайлов, начатое в: $start_render_date " >> ${log}

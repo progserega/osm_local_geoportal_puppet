@@ -1,0 +1,12 @@
+#!/bin/bash
+# Managed by puppet. Not edit manualy.
+
+log="/var/log/osm/create_osm_xml_config.sh.log"
+world_boundaries_path="/opt/osm/world_boundaries/world_boundaries"
+mapnik_path="/opt/osm/mapnik"
+echo "`date +%Y.%m.%d-%T`: ====== start $0 ========" > ${log}
+echo "start cmd: ${mapnik_path}/generate_xml.py ${mapnik_path}/osm.xml ${mapnik_path}/temp.xml --inc ${mapnik_path}/inc --host <%= @db_host %> --user <%= @db_user %> --dbname <%= @db_local_osm_relese_name %> --symbols ${mapnik_path}/symbols/ --world_boundaries ${world_boundaries_path} --port <%= @db_port %> --password '<%= @db_passwd %>' --epsg='900913' " >> "${log}"
+${mapnik_path}/generate_xml.py ${mapnik_path}/osm.xml ${mapnik_path}/temp.xml --inc ${mapnik_path}/inc --host <%= @db_host %> --user <%= @db_user %> --dbname <%= @db_local_osm_relese_name %> --symbols ${mapnik_path}/symbols/ --world_boundaries ${world_boundaries_path} --port <%= @db_port %> --password '<%= @db_passwd %>' --epsg='900913' &>> ${log}
+echo "start cmd: upgrade-map-xml ${mapnik_path}/temp.xml <%= @osm_xml_config %>" >> "${log}"
+upgrade-map-xml ${mapnik_path}/temp.xml <%= @osm_xml_config %> &>> "${log}"
+echo "`date +%Y.%m.%d-%T`: ====== end $0 ========" >> ${log}

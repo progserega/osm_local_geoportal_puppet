@@ -1,0 +1,21 @@
+diff -ruN kothic.orig/src/libkomapnik.py kothic/src/libkomapnik.py
+--- kothic.orig/src/libkomapnik.py	2015-04-24 08:46:52.000000000 +1000
++++ kothic/src/libkomapnik.py	2015-04-24 14:59:25.000000000 +1000
+@@ -144,7 +144,7 @@
+     pos = pos.replace("exact", "X").replace("any", "S, E, X, N, W, NE, SE, NW, SW").split(",")
+     pos.extend([str(int(float(x) * text_scale)) for x in size.split(",")])
+     pos = ",".join(pos)
+-    size = str(float(size.split(",")[0]) * text_scale)
++    size = str(int(float(size.split(",")[0]) * text_scale))
+     angle = str(int(angle))
+ 
+     placement = {"center": "interior"}.get(placement.lower(), placement)
+@@ -165,7 +165,7 @@
+     halo_color = nicecolor(halo_color)
+     placement = {"center": "point"}.get(placement.lower(), placement)
+     align = {"center": "middle"}.get(align.lower(), align)
+-    size = str(float(size.split(",")[0]) * text_scale)
++    size = str(int(float(size.split(",")[0]) * text_scale))
+     if width:
+         width = ' width="%s" ' % width
+     if height:
