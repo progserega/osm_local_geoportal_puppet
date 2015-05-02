@@ -1,9 +1,9 @@
 #!/bin/bash
 # Managed by Puppet. Do not edit manualy.
 
-email_success="abuse@rsprim.ru"
-email_error_to="abuse@rsprim.ru"
-email_server="mail-rsprim-ru.rs.int"
+email_success="admin@emailserver.ru"
+email_error_to="admin@emailserver.ru"
+email_server="corp-email-server.ru"
 
 tmp_base="<%= @db_local_osm_tmp_name %>"
 release_base="<%= @db_local_osm_relese_name %>"
@@ -33,7 +33,7 @@ send_error()
 	echo "`date +%Y.%m.%d-%T`: send_error(): ошибка при выполнении команды: ${1}" >> ${log}
 	echo "`date +%Y.%m.%d-%T`: send_error(): отправляю письмо пользователю: ${email_error_to}" >> ${log}
 	subject=`echo "OSM-сервер: ОШИБКА! Сбой обновления postgres базы ${release_base}"|base64 -w 0`
-	sendEmail -o tls=no -f osm_import@rsprim.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
+	sendEmail -o tls=no -f osm@osm-render.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
 	-m "Письмо сгенерировано автоматически.
 Произошёл сбой на сервере `hostname` в подсистеме OSM. При попытке обновления базы данных postgres с именем '$release_base' 
 произошла ошибка. Задачей обновления была заливка нового дампа Openstreetmap России, для формирования подложки карты OSM, поверх
@@ -339,7 +339,7 @@ then
 	/etc/init.d/apache2 restart
 
 	subject=`echo "OSM-сервер: ОШИБКА! Сбой обновления postgres базы ${release_base}"|base64 -w 0`
-	sendEmail  -o tls=no -f osm_import@rsprim.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
+	sendEmail  -o tls=no -f osm@osm-render.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
 	-m "Письмо сгенерировано автоматически.
 Произошёл сбой на сервере `hostname` в подсистеме OSM. При попытке обновления базы данных postgres с именем '$release_base' 
 произошла ошибка. Задачей обновления была заливка нового дампа Openstreetmap России, для формирования подложки карты OSM, поверх
@@ -370,7 +370,7 @@ else
 	echo "`date +%Y.%m.%d-%T`: успешно загрузил текущую базу ${release_base} из файла бэкапа '${tmp_db_file}', содержащий свежий дамп России" >> ${log}
 	subject=`echo "OSM-сервер: УСПЕШНО завершено обновление базы данных ${release_base} из дампа Openstreetmap России"|base64 -w 0`
 
-	sendEmail  -o tls=no -f osm_import@rsprim.ru -o message-charset=utf-8 -t "${email_success}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
+	sendEmail  -o tls=no -f osm@osm-render.ru -o message-charset=utf-8 -t "${email_success}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
 	-m "Письмо сгенерировано автоматически.
 Сегодня была успешно обновлена база ${release_base} из дампа OSM России: ${url_dump}.
 Дамп был успешно сконвертирован в базу postgis и загружен в базу ${release_base}.
@@ -404,7 +404,7 @@ echo "`date +%Y.%m.%d-%T`: удаляем статус-файл: ${state_file}" 
 rm "${state_file}"
 
 subject=`echo "OSM-сервер: УСПЕШНОЕ обновление postgres базы ${release_base} из дампа OSM России"|base64 -w 0`
-sendEmail  -o tls=no -f osm_import@rsprim.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
+sendEmail  -o tls=no -f osm@osm-render.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
 -m "Письмо сгенерировано автоматически.
 Успешно загрузил дамп России в локальную базу-копию OSM.
 
