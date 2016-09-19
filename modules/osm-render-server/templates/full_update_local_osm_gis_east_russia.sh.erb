@@ -1,9 +1,12 @@
 #!/bin/bash
 # Managed by Puppet. Do not edit manualy.
 
-email_success="admin@emailserver.ru"
-email_error_to="admin@emailserver.ru"
-email_server="corp-email-server.ru"
+#email_success="abuse@rsprim.ru"
+#email_error_to="abuse@rsprim.ru"
+email_success="<%= @email_admin %>"
+email_error_to="<%= @email_admin %>"
+email_server="<%= @email_server %>"
+email_from="<%= @email_from %>"
 
 tmp_base="<%= @db_local_osm_tmp_name %>"
 release_base="<%= @db_local_osm_relese_name %>"
@@ -27,6 +30,7 @@ state_file="/var/spool/osm/local_osm_update/full_update_from_russia_backup.state
 # RU-PRI	Приморский край
 # RU-YEV	Еврейская автономная область
 regions_to_proccess="RU-AMU RU-KHA RU-PRI RU-SA RU-YEV"
+#regions_to_proccess="RU-PRI"
 
 
 #WGET_SPEED="30k"
@@ -41,7 +45,7 @@ send_error()
 	echo "`date +%Y.%m.%d-%T`: send_error(): ошибка при выполнении команды: ${1}" >> ${log}
 	echo "`date +%Y.%m.%d-%T`: send_error(): отправляю письмо пользователю: ${email_error_to}" >> ${log}
 	subject=`echo "OSM-сервер: ОШИБКА! Сбой обновления postgres базы ${release_base}"|base64 -w 0`
-	sendEmail -o tls=no -f osm@osm-render.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
+	sendEmail -o tls=no -f ${email_from} -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
 	-m "Письмо сгенерировано автоматически.
 Произошёл сбой на сервере `hostname` в подсистеме OSM. При попытке обновления базы данных postgres с именем '$release_base' 
 произошла ошибка. Задачей обновления была заливка нового дампа Openstreetmap России, для формирования подложки карты OSM, поверх
@@ -139,8 +143,11 @@ data="`date --date 'yesterday' +%y%m%d`"
 
 for region in $regions_to_proccess
 do
-	url_dump="http://data.gis-lab.info/osm_dump/dump/${region}/${region}-${data}.osm.pbf"
-	dump_file="${tmp_dump_dir}/${region}-${data}.osm.pbf"
+	#url_dump="http://data.gis-lab.info/osm_dump/dump/${region}/${region}-${data}.osm.pbf"
+	#dump_file="${tmp_dump_dir}/${region}-${data}.osm.pbf"
+
+	url_dump="http://be.gis-lab.info/data/osm_dump/dump/latest/${region}.osm.pbf"
+	dump_file="${tmp_dump_dir}/${region}.osm.pbf"
 	echo "`date +%Y.%m.%d-%T`: Start wget ${region} dump: ${url_dump} (wget log: $wget_log)" >> ${log}
 
 	wget ${WGET_AUTH} -c -t 0 --limit-rate=${WGET_SPEED} "${url_dump}" -O "${dump_file}" -a "${wget_log}"
@@ -238,8 +245,13 @@ echo "`date +%Y.%m.%d-%T`: Включаем dict_int, status=$ret_status" >> ${l
 
 # Инициируем базу:
 echo "`date +%Y.%m.%d-%T`: Инициируем базу:" >> ${log}
-shemas="/usr/share/postgresql/9.1/contrib/postgis-1.5/postgis.sql \
-/usr/share/postgresql/9.1/contrib/postgis-1.5/spatial_ref_sys.sql"
+
+postgis_sql="`find  /usr/share/postgresql/ -name postgis.sql`"
+spatial_ref_sys_sql="`find  /usr/share/postgresql/ -name spatial_ref_sys.sql`"
+
+#shemas="/usr/share/postgresql/9.1/contrib/postgis-1.5/postgis.sql \
+#/usr/share/postgresql/9.1/contrib/postgis-1.5/spatial_ref_sys.sql"
+shemas="${postgis_sql} ${spatial_ref_sys_sql}"
 
 #shemas="/usr/share/postgresql-9.0/contrib/hstore.sql \
 #/usr/share/postgresql-9.0/contrib/_int.sql \
@@ -375,7 +387,7 @@ then
 	/etc/init.d/apache2 restart
 
 	subject=`echo "OSM-сервер: ОШИБКА! Сбой обновления postgres базы ${release_base}"|base64 -w 0`
-	sendEmail -o tls=no -f osm@osm-render.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
+	sendEmail -o tls=no -f ${email_from} -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
 	-m "Письмо сгенерировано автоматически.
 Произошёл сбой на сервере `hostname` в подсистеме OSM. При попытке обновления базы данных postgres с именем '$release_base' 
 произошла ошибка. Задачей обновления была заливка нового дампа Openstreetmap России, для формирования подложки карты OSM, поверх
@@ -406,7 +418,7 @@ else
 	echo "`date +%Y.%m.%d-%T`: успешно загрузил текущую базу ${release_base} из файла бэкапа '${tmp_db_file}', содержащий свежий дамп России" >> ${log}
 	subject=`echo "OSM-сервер: УСПЕШНО завершено обновление базы данных ${release_base} из дампа Openstreetmap России"|base64 -w 0`
 
-	sendEmail  -o tls=no -f osm@osm-render.ru -o message-charset=utf-8 -t "${email_success}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
+	sendEmail  -o tls=no -f ${email_from} -o message-charset=utf-8 -t "${email_success}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
 	-m "Письмо сгенерировано автоматически.
 Сегодня была успешно обновлена база ${release_base} из дампа OSM России: ${url_dump}.
 Дамп был успешно сконвертирован в базу postgis и загружен в базу ${release_base}.
@@ -440,7 +452,7 @@ echo "`date +%Y.%m.%d-%T`: удаляем статус-файл: ${state_file}" 
 rm "${state_file}"
 
 subject=`echo "OSM-сервер: УСПЕШНОЕ обновление postgres базы ${release_base} из дампа OSM России"|base64 -w 0`
-sendEmail  -o tls=no -f osm@osm-render.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
+sendEmail  -o tls=no -f ${email_from} -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
 -m "Письмо сгенерировано автоматически.
 Успешно загрузил дамп России в локальную базу-копию OSM.
 

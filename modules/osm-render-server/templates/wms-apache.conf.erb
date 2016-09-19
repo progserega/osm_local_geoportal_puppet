@@ -1,0 +1,26 @@
+<VirtualHost <%= @wms_render_domain %>:80>
+ServerAdmin <%= @email_admin %>
+
+ServerName <%= @wms_render_domain %>
+#ServerAlias wms.map.prim.drsk.ru
+#ServerAlias wms.osm-render.rs.int
+
+DocumentRoot /var/www/tilecache
+
+ErrorLog /var/log/apache2/<%= @wms_render_domain %>-error.log
+
+# Possible values include: debug, info, notice, warn, error, crit,
+# alert, emerg.
+LogLevel error
+
+CustomLog /var/log/apache2/<%= @wms_render_domain %>-access.log combined
+
+<Directory /var/www/tilecache/>
+Order allow,deny
+Allow from all 
+  DirectoryIndex tilecache.cgi
+  Options +ExecCGI
+  AddHandler cgi-script .cgi pl
+</Directory>
+
+</VirtualHost>

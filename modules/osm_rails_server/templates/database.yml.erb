@@ -1,0 +1,29 @@
+# Using a recent release (8.3 or higher) of PostgreSQL (http://postgresql.org/) is recommended.
+# See https://github.com/openstreetmap/openstreetmap-website/blob/master/INSTALL.md#database-setup for detailed setup instructions.
+#
+development:
+  adapter: postgresql
+  database: <%= @db_dev_name %>
+  username: <%= @db_dev_user_name %>
+  password: <%= @db_dev_passwd %>
+  host: <%= @db_dev_host %>
+  encoding: utf8
+
+# Warning: The database defined as 'test' will be erased and
+# re-generated from your development database when you run 'rake'.
+# Do not set this db to the same as development or production.
+test:
+  adapter: postgresql
+  database: <%= @db_test_name %>
+  username: <%= @db_test_user_name %>
+  password: <%= @db_test_passwd %>
+  host:  <%= @db_test_host %>
+  encoding: utf8
+
+production:
+  adapter: postgresql
+  database: <%= @db_prodaction_name %>
+  username:  <%= @db_prodaction_user_name %>
+  password:  <%= @db_prodaction_passwd %>
+  host:  <%= @db_prodaction_host %>
+  encoding: utf8

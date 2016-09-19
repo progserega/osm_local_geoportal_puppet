@@ -1,0 +1,40 @@
+#!/bin/bash
+####  Config file for osmbot ####
+
+# Имя задачи:
+job_name="power_usage"
+job_comment="Установка отдаваемых подстанциями мощностей, данные берутся из XML, который экспортируется из 1C. Данные получены из: <%= @load_xml_url %>"
+
+
+# Login to api-server:
+login="<%= @osmbot_user %>"
+
+# Password to api-server:
+passwd="<%= @osmbot_passwd %>"
+
+# Api-server url:
+#api_server="http://api06.dev.openstreetmap.org"
+api_server="http://osm.prim.drsk.ru"
+
+# area to process by bot:
+# ПС 110/6 Шахта 7
+#bbox_to_process="132.14431,43.3518,132.15165,43.35607"
+# primorsky kray:
+bbox_to_process="129.4189453,42.2285174,139.1748047,48.7199612"
+
+rules_file="<%= @osmbot_rules %>"
+
+# value of tags 'created_by' and 'comment', added to changeset:
+changeset_created_by_tag="osmbot https://github.com/progserega/osmbot.git Домашняя страница пользователя: http://osm.prim.drsk.ru/user/osmbot" 
+changeset_comment_tag="${job_comment}"
+
+# Process square by 0.5
+step="0.1"
+
+# Log file:
+log="/var/log/osm/osmbot_${job_name}.log"
+
+curl_opt="--retry 60 --retry-delay 120"
+
+osmosis="/usr/bin/osmosis"
+osmpatch="/opt/osm/local_utils/osmbot/bin/osmpatch"

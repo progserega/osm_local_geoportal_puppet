@@ -1,0 +1,14 @@
+#define mongrel cluster
+<proxy balancer://mongrelcluster>
+BalancerMember http://127.0.0.1:3000
+</proxy>
+
+#forward requests to mongrel cluster
+<virtualhost *:80>
+ServerName <%= @server_url %>
+ServerAlias <%= @fqdn %>
+ProxyPass / balancer://mongrelcluster/
+ProxyPassReverse / balancer://mongrelcluster/
+ProxyPreserveHost on
+ErrorLog <%= @server_url %>-error.log
+</virtualhost>

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+load_xml_url="<%= @load_xml_url %>"
+import_data_file="<%= @import_data_file %>"
+parser="/opt/osm/local_utils/import_tp_loading/load_xml2osmbot_xml.py"
+
+#Генерируемый конфиг для osmobot:
+out_file="<%= @osmbot_rules %>"
+osmbot_config="<%= @osmbot_config %>"
+
+# Путь к запуску osmbot:
+osmbot_script="/opt/osm/local_utils/osmbot/bin/run_bot.sh"
+
+log="/var/log/osm/import_tp_loading.log"
+email_error_to="<%= @email_error_to %>"
+email_server="<%= @email_server %>"

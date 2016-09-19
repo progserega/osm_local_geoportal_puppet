@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import cgi
+import os
+
+
+
+#print "Content-Type: text/html\n\n"; 
+print("""
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=utf-8">
+<TITLE>Текущий список линий ВЛ</TITLE>
+<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.1  (Linux)">
+<META NAME="AUTHOR" CONTENT="Сергей Семёнов">
+<META NAME="CREATED" CONTENT="20100319;10431100">
+<META NAME="CHANGEDBY" CONTENT="Сергей Семёнов">
+<META NAME="CHANGED" CONTENT="20100319;10441400">
+<STYLE TYPE="text/css">
+<!--
+@page { size: 21cm 29.7cm; margin: 2cm }
+P { margin-bottom: 0.21cm }
+-->
+</STYLE>
+
+<style>
+   .normaltext {
+   }
+</style>
+<style>
+   .ele_null {
+    color: red; /* Красный цвет выделения */
+   }
+</style>
+<style>
+   .selected_node {
+    color: green; /* Зелёный цвет выделения */
+	background: #D9FFAD;
+	font-size: 150%;
+   }
+</style>
+
+</HEAD>
+<BODY LANG="ru-RU" LINK="#000080" VLINK="#800000" DIR="LTR">
+""")
+
+line_list="<%= @list_names_of_lines_path %>"
+
+print("""
+		<TABLE BORDER>
+		<TR>    
+				<TH COLSPAN=2>Список наименований ВЛ</TH>
+		</TR>
+		<TR>
+				<TH COLSPAN=1>№</TH>
+				<TH COLSPAN=1>Имя линии</TH>
+		</TR>
+		""")
+
+index=1
+for line in open(line_list):
+	index+=1
+	print("""<TR>
+		 <TD>%(index)d</TD>
+		 <TD>%(line)s</TD>
+		 </TR>""" % {"index":index, "line":line})
+
+
+print("</TABLE>")
+print("""
+</body>
+</html>
+""")
+

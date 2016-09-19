@@ -1,0 +1,25 @@
+[options]
+verbose = 1
+read_all = false
+#delete = true
+## 4 Мб
+##max_message_size = 4194304
+## 3 Мб
+##max_message_size = 3145728
+## 2 Мб
+#max_message_size = 2097152
+message_log = <%= @log_path %>/osm_import_from_mail_getmail.log
+#
+[retriever]
+type = SimpleIMAPRetriever
+server = <%= @email_server %>
+username = <%= @email_import %>
+password =  <%= @email_import_passwd %>
+#
+#
+[destination]
+[destination]
+type = Maildir
+path = <%= @maildir_path %>/
+#type=MDA_external
+#path=/usr/bin/procmail

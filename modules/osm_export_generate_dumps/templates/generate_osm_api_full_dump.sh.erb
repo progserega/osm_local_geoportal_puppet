@@ -1,0 +1,39 @@
+#!/bin/bash
+
+
+log="<%= @log_dir %>/generate_osm_api_full_dump.log"
+
+export_path="<%= @export_path %>/"
+osm_dump="${export_path}/drsk_osm_full_dump_latest.osm"
+pbf_dump="${export_path}/drsk_osm_full_dump_latest.pbf"
+pbf_meta="${export_path}/drsk_osm_full_dump_latest.pbf.meta"
+
+osmconvert="<%= @osmconvert_bin_path %>"
+
+
+#Использование:
+#$0 файл_среза_osm.osm
+#или:
+#$0 файл_среза_osm.osm.bz2"
+#	exit
+#fi
+#dump="$1"
+
+mv "${osm_dump}.gz" "${export_path}/drsk_osm_full_dump_`date +%Y.%m.%d`.osm.gz"
+mv "${pbf_dump}" "${export_path}/drsk_osm_full_dump_`date +%Y.%m.%d`.pbf"
+echo "`date +%Y.%m.%d-%T`: Выгружаем новый файл выгрузки из базы openstreetmap:" >> ${log}
+
+osmosis --read-apidb host="<%= @osm_api_server_db_host %>" database="<%= @osm_api_server_db_name %>" user="<%= @osm_api_server_db_user %>" password="<%= @osm_api_server_db_passwd %>" validateSchemaVersion=no --write-xml file="${osm_dump}" &>> ${log}
+
+${osmconvert} "${osm_dump}" --out-pbf -o="${pbf_dump}"
+chmod 644 "${pbf_dump}"
+
+gzip "${osm_dump}"
+
+echo "[DEFAULT]
+format = pbf
+version = `date '+%Y-%m-%d %T'`
+poly = RU
+" > "${pbf_meta}"
+
+chmod 644 "${pbf_meta}"

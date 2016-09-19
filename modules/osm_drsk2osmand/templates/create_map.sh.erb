@@ -1,0 +1,44 @@
+#!/bin/sh
+WORK_FOLDER="<%= @work_dir %>"
+VAR_DIR="<%= @var_dir %>"
+log="<%= @log_path %>"
+#java_log="<%= @log_path %>.java.log"
+
+echo "`date +%Y.%m.%d-%T`: ============= start $0 ================" >> "${log}"
+
+# First download all the data
+rm -v <%= @var_dir_create_osm %>/*
+rm -v <%= @var_dir_create_osm_index %>/*
+rm -v <%= @var_dir_create_osm_gen_files %>/*
+
+${WORK_FOLDER}/drsk_osm2pbf.sh
+
+cd $WORK_FOLDER
+
+echo "`date +%Y.%m.%d-%T`:$0: start converting by java OsmAndMapCreator.jar"
+echo "`date +%Y.%m.%d-%T`:$0: start converting by java OsmAndMapCreator.jar" >> "${log}"
+java -Djava.util.logging.config.file=logging.properties -Xms256M -Xmx2560M -cp "./OsmAndMapCreator.jar:./lib/OsmAnd-core.jar:./lib/*.jar" net.osmand.data.index.IndexBatchCreator ./batch.xml
+if [ 0 != $? ]
+then
+	echo "`date +%Y.%m.%d-%T`: $0: ERROR 'java -Djava.util.logging.config.file=logging.properties -Xms256M -Xmx2560M -cp \"./OsmAndMapCreator.jar:./lib/OsmAnd-core.jar:./lib/*.jar\" net.osmand.data.index.IndexBatchCreator ./batch.xml'"
+	echo "`date +%Y.%m.%d-%T`: $0: ERROR 'java -Djava.util.logging.config.file=logging.properties -Xms256M -Xmx2560M -cp \"./OsmAndMapCreator.jar:./lib/OsmAnd-core.jar:./lib/*.jar\" net.osmand.data.index.IndexBatchCreator ./batch.xml'" >> "${log}"
+	exit 1
+fi
+echo "`date +%Y.%m.%d-%T`:$0: end converting by java OsmAndMapCreator.jar"
+echo "`date +%Y.%m.%d-%T`:$0: end converting by java OsmAndMapCreator.jar" >> "${log}"
+
+#cd $WORK_FOLDER
+
+echo "And finally moving the obf files from the index folder to the osmandmaps folder\n"
+echo "mv <%= @var_dir_create_osm_index %>/Country_2.obf <%= @export_file %>"
+echo "`date +%Y.%m.%d-%T`:$0: And finally moving the obf files from the index folder to the osmandmaps folder" >> "${log}"
+echo "`date +%Y.%m.%d-%T`:$0: mv <%= @var_dir_create_osm_index %>/Country_2.obf <%= @export_file %>" >> "${log}"
+mv <%= @var_dir_create_osm_index %>/Country_2.obf <%= @export_file %>
+if [ 0 != $? ]
+then
+	echo "`date +%Y.%m.%d-%T`: $0: ERROR mv file!">> "${log}"
+	exit 1
+else
+	echo "`date +%Y.%m.%d-%T`: $0: SUCCESS mv file">> "${log}"
+fi
+exit 0

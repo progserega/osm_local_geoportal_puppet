@@ -1,0 +1,44 @@
+<html>
+<HEAD>
+<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=utf-8">
+<TITLE>Добавление ВЛ</TITLE>
+<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.1  (Linux)">
+<META NAME="AUTHOR" CONTENT="Сергей Семёнов">
+<META NAME="CREATED" CONTENT="20100319;10431100">
+<META NAME="CHANGEDBY" CONTENT="Сергей Семёнов">
+<META NAME="CHANGED" CONTENT="20100319;10441400">
+<STYLE TYPE="text/css">
+<!--
+@page { size: 21cm 29.7cm; margin: 2cm }
+P { margin-bottom: 0.21cm }
+-->
+</STYLE>
+
+<style>
+.normaltext {
+}
+</style>
+<style>
+.ele_null {
+color: red; /* Красный цвет выделения */
+}
+</style>
+<style>
+.selected_node {
+color: green; /* Зелёный цвет выделения */
+background: #D9FFAD;
+font-size: 150%;
+}
+</style>
+
+</HEAD>
+
+<body><h1>Добавление новой линии ВЛ</h1>
+<p>Добавление имени ВЛ в список (проверить можно по <a target="_self" href="<%= @list_name_vl_url %>">по ссылке</a>), по которому проверяется правильность оформления входных данных в GPX</p>
+
+<form method=POST action="add_new_vl.cgi">
+<P><B>Введите имя новой линии ВЛ без кавычек, как есть:</B>
+<P><input type=text name=name_vl>
+<P><input type=submit>
+</form>
+</body></html>

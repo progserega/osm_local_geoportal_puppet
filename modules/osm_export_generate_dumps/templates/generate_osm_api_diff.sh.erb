@@ -1,0 +1,21 @@
+#!/bin/bash
+
+log="<%= @log_dir %>/generate_drsk_osm_diff.log"
+var_dir="<%= @var_dir_diff %>/"
+drsk_osm_new="${var_dir}/drsk_osm_new.osm"
+drsk_osm_prev="${var_dir}/drsk_osm_prev.osm"
+diff_api_changes="${var_dir}/diff_api_changes_latest.osc"
+
+echo "`date +%Y.%m.%d-%T`: ============ Начал  выполнение скрипта $0 ==========" >> ${log}
+echo "`date +%Y.%m.%d-%T`: Выгружаем новый файл выгрузки из базы openstreetmap:" >> ${log}
+osmosis --read-apidb host="<%= @osm_api_server_db_host %>" database="<%= @osm_api_server_db_name %>" user="<%= @osm_api_server_db_user %>" password="<%= @osm_api_server_db_passwd %>" validateSchemaVersion=no --write-xml file="${drsk_osm_new}" &>> ${log}
+
+mv ${diff_api_changes} "${var_dir}/diff_api_changes_`date +%Y.%m.%d-%T`.osc"
+
+echo "`date +%Y.%m.%d-%T`: Выявление изменения между прошлой и новой выгрузкой:" >> ${log}
+osmosis --read-xml ${drsk_osm_new} --read-xml ${drsk_osm_prev} --derive-change --write-xml-change ${diff_api_changes}  &>> ${log}
+mv ${drsk_osm_new} ${drsk_osm_prev}
+
+echo "`date +%Y.%m.%d-%T`: Размер файла изменений: `cat ${diff_api_changes}|wc -l` строк" >> ${log}
+
+echo "`date +%Y.%m.%d-%T`: Закончил выполнение скрипта $0" >> ${log}

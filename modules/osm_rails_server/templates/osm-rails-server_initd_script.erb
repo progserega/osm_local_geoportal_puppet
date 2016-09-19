@@ -1,0 +1,72 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          osm_rails 
+# Required-Start:    $syslog $time $network
+# Required-Stop:     $syslog $time $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Deferred execution scheduler
+# Description:       Debian init script for the atd deferred executions
+#                    scheduler
+### END INIT INFO
+#
+# Author:	progserega <semenov@rsprim.ru>
+#
+
+OSM_PATH=/opt/osm/openstreetmap-website
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+DAEMON=/usr/bin/ruby1.9.1
+#PIDFILE="<%= @install_path %>/openstreetmap-website/tmp/pids/server.pid"
+PIDFILE="/var/run/osm_api_server.pid"
+#EXE=/usr/local/bin/bundle
+#EXE=/usr/local/bin/rails
+EXE=<%= @bundle_path %>
+
+test -x $DAEMON || exit 0
+
+. /lib/lsb/init-functions
+
+case "$1" in
+  start)
+  	if [ -f $PIDFILE ]
+	then
+		PID=`cat $PIDFILE`
+		if [ ! 0 -eq "`ps aux|awk '{print $2}'|grep $PID|grep -v grep|wc -l`" ]
+		then
+			log_daemon_msg "OSM Rails Server already running!" "osm-rails-server"
+			exit 1
+		fi
+	fi
+	log_daemon_msg "Starting OSM Rails Server" "osm-rails-server"
+	cd ${OSM_PATH}
+	#start-stop-daemon --start -p $PIDFILE -b --chdir ${OSM_PATH} --exec ${EXE} -- exec rails server
+	start-stop-daemon --start -m -p $PIDFILE -b --chdir ${OSM_PATH} --exec ${EXE} -- exec rails server
+	log_end_msg $?
+    ;;
+  stop)
+	log_daemon_msg "Stopping OSM Rails Server" "osm-rails-server"
+	#killproc -p $PIDFILE $DAEMON
+	kill -INT `cat ${PIDFILE}`
+	#sleep 2
+	#killall ruby1.9.1
+	log_end_msg $?
+    ;;
+  force-kill)
+	log_daemon_msg "Force kill OSM Rails Server" "osm-rails-server"
+	killall -9 ruby1.9.1
+	log_end_msg $?
+    ;;
+  force-reload|restart)
+    $0 stop
+    $0 start
+    ;;
+  status)
+    status_of_proc -p $PIDFILE $DAEMON rails && exit 0 || exit $?
+    ;;
+  *)
+    echo "Usage: /etc/init.d/osm-rails-server {start|stop|force-kill|restart|force-reload|status}"
+    exit 1
+    ;;
+esac
+
+exit 0

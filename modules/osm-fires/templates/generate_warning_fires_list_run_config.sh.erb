@@ -1,0 +1,12 @@
+#!/bin/bash
+fires_data_file="<%= @fires_data_file %>"
+
+tp_data_file="<%= @tp_data_file %>"
+tp_warning_list="<%= @tp_warning_list %>"
+station_data_file="<%= @station_data_file %>"
+station_warning_list="<%= @station_warning_list %>"
+
+parser="/opt/osm/local_utils/fires_data_process/warning_fires_list/generate_warning_fires_list.py"
+email_error_to="<%= @email_error_to %>"
+email_server="<%= @email_server %>"
+log="/var/log/osm/warning_fires_list.log"

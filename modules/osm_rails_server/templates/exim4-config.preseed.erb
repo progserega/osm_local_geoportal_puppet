@@ -1,0 +1,14 @@
+exim4-config	exim4/dc_other_hostnames	string	<%= @fqdn %>
+exim4-config	exim4/dc_eximconfig_configtype	select	mail sent by smarthost; no local mail
+exim4-config	exim4/no_config	boolean	true
+exim4-config	exim4/hide_mailname	boolean	true
+exim4-config	exim4/dc_postmaster	string	<%= @email_admin %>
+exim4-config	exim4/dc_smarthost	string	<%= @email_server %>
+exim4-config	exim4/dc_relay_domains	string	
+exim4-config	exim4/dc_relay_nets	string	
+exim4-config	exim4/mailname	string	<%= @fqdn %>
+exim4-config	exim4/dc_readhost	string	<%= @fqdn %>
+exim4-config	exim4/use_split_config	boolean	false
+exim4-config	exim4/dc_localdelivery	select	mbox format in /var/mail/
+exim4-config	exim4/dc_local_interfaces	string	127.0.0.1
+exim4-config	exim4/dc_minimaldns	boolean	false

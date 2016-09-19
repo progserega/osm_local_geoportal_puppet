@@ -4,9 +4,9 @@ corp_base="<%= @db_corp_name %>"
 db_user="<%= @db_user %>"
 db_host="<%= @db_host %>"
 
-email_success="admin@emailserver.ru"
-email_error_to="admin@emailserver.ru"
-email_server="corp-email-server.ru"
+email_success="abuse@rsprim.ru"
+email_error_to="abuse@rsprim.ru"
+email_server="mail-rsprim-ru.rs.int"
 
 log="/var/log/osm/openstreetmap2drsk_gis.log"
 var_dir="/var/spool/osm/drsk_gis_update/"
@@ -14,14 +14,14 @@ diff_api_changes="${var_dir}/diff_api_changes.osc"
 need_to_render="${var_dir}/tiles_to_render.list"
 need_to_render_old="${var_dir}/tiles_to_render.list_old"
 style="/opt/osm/drsk_osm_map_styles/osm2pgsql_styles/drsk.style"
-diff_url="http://export.osm.prim.drsk.ru/diff/diff_api_changes_latest.osc"
+diff_url="http://<%= @export_server_domain %>/diff/diff_api_changes_latest.osc"
 
 send_error()
 {
 	echo "`date +%Y.%m.%d-%T`: send_error(): ошибка при выполнении команды: ${1}" >> ${log}
 	echo "`date +%Y.%m.%d-%T`: send_error(): отправляю письмо пользователю: ${email_error_to}" >> ${log}
 	subject=`echo "OSM-сервер: ОШИБКА! Сбой обновления postgres базы ${corp_base}"|base64 -w 0`
-	sendEmail -o tls=no -f osm@osm-render.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
+	sendEmail -o tls=no -f osm_import@rsprim.ru -o message-charset=utf-8 -t "${email_error_to}" -s ${email_server} -u "=?utf-8?b?${subject}?=" \
 	-m "Письмо сгенерировано автоматически.
 Произошёл сбой на сервере `hostname` в подсистеме OSM. При попытке обновления базы данных postgres с именем '$corp_base' 
 произошла ошибка. Задачей обновления была миграция изменений из основной OSM-базы ДРСК в postgis базу ДРСК для отрисовки слоёв.

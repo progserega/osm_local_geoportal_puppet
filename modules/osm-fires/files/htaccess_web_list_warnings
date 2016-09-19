@@ -1,0 +1,7 @@
+Options FollowSymLinks ExecCGI
+DirectoryIndex index.cgi
+
+#order allow deny
+#deny from all
+#allow from all
+

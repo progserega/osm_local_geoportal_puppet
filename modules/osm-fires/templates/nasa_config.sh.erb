@@ -1,0 +1,7 @@
+#!/bin/bash
+import_data_file="<%= @fires_data_file %>"
+out_file="<%= @osm_site_prod_path %>/www/js/page.map/fire_geojson.js"
+parser="<%= @install_path %>/local_utils/fires_data_process/nasa/fires_csv2json.py"
+email_error_to="<%= @email_error_to %>"
+email_server="<%= @email_server %>"
+log="<%= @log_path %>/fires_data.log"

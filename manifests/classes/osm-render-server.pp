@@ -1,47 +1,101 @@
-class osm-render-server ($db_host="db.rs.int", $db_port="5432", $db_user="openstreetmap", $db_passwd="openstreetmap", $db_corp_name="drsk_gis", $db_local_osm_relese_name="local_osm_gis", $db_local_osm_tmp_name="local_osm_gis_tmp", $osm_xml_config="/etc/mapnik/osm_local.xml" ) {
+class osm-render-server (
+	$db_host="db.rs.int", 
+	$db_port="5432", 
+	$db_user="openstreetmap", 
+	$db_passwd="openstreetmap", 
+	$db_corp_name="drsk_gis", 
+	$db_local_osm_relese_name="local_osm_gis", 
+	$db_local_osm_tmp_name="local_osm_gis_tmp", 
+	$osm_xml_config="/etc/mapnik/osm_local.xml",
+	$email_admin="semenov@rsprim.ru",
+	$email_from="osm_import@rsprim.ru",
+	$email_server="mail-rsprim-ru.rs.int",
+	$tile_render_domain="tile.osm.prim.drsk.ru",
+	$wms_render_domain="wms.osm.prim.drsk.ru",
+	$export_server_domain="export.osm.prim.drsk.ru",
+	# путь к модулям, зависит от версии установленного мапника, при неверном указании - мапник не грузит shape-файлы границ, узнать можно с помощью команды: 'mapnik-config --input-plugins'
+	$mapnik_plugins_dir="/usr/lib/mapnik/2.0/input",
+	$postgres_version="9.1"
+	) {
 
 	# ====================== Установка mod_tile ===================
-	package { 'osm2pgsql':
-		ensure => installed
+	if !defined(package ['osm2pgsql'])
+	{
+		package { 'osm2pgsql':
+			ensure => installed
+		}
 	}
-	package { 'python-mapnik2':
-		ensure => installed
+	if !defined(package ['python-mapnik2'])
+	{
+		package { 'python-mapnik2':
+			ensure => installed
+		}
 	}
-	package { 'mapnik-utils':
-		ensure => installed
+	if !defined(package ['mapnik-utils'])
+	{
+		package { 'mapnik-utils':
+			ensure => installed
+		}
 	}
 	package { 'tilecache':
 		ensure => installed
 	}
-	package { 'build-essential':
-		ensure => installed
+	if !defined(package ['build-essential'])
+	{
+		package { 'build-essential':
+			ensure => installed
+		}
 	}
-	package { 'fakeroot':
-		ensure => installed
+	if !defined(package ['fakeroot'])
+	{
+		package { 'fakeroot':
+			ensure => installed
+		}
 	}
-	package { 'debhelper':
-		ensure => installed
+	if !defined(package ['debhelper'])
+	{
+		package { 'debhelper':
+			ensure => installed
+		}
 	}
-	package { 'apache2-mpm-prefork':
-		ensure => installed
+	if !defined(package ['apache2-mpm-prefork'])
+	{
+		package { 'apache2-mpm-prefork':
+			ensure => installed
+		}
 	}
-	package { 'libapache2-mod-python':
-		ensure => installed
+	if !defined(package ['libapache2-mod-python'])
+	{
+		package { 'libapache2-mod-python':
+			ensure => installed
+		}
 	}
-	package { 'apache2-prefork-dev':
-		ensure => installed
+	if !defined(package ['apache2-prefork-dev'])
+	{
+		package { 'apache2-prefork-dev':
+			ensure => installed
+		}
 	}
 	package { 'libmapnik2-dev':
 		ensure => installed
 	}
-	package { 'autoconf':
-		ensure => installed
+	if !defined(package ['autoconf'])
+	{
+		package { 'autoconf':
+			ensure => installed
+		}
 	}
-	package { 'automake':
-		ensure => installed
+	if !defined(package ['automake'])
+	{
+		package { 'automake':
+			ensure => installed
+		}
 	}
-	package { 'm4':
-		ensure => installed
+	if !defined(package ['m4'])
+	{
+		package { 'm4':
+			ensure => installed
+		}
 	}
 	package { 'libtool':
 		ensure => installed
@@ -52,31 +106,44 @@ class osm-render-server ($db_host="db.rs.int", $db_port="5432", $db_user="openst
 	package { 'ttf-unifont':
 		ensure => installed
 	}
-	package { 'postgresql-client-9.1':
-		ensure => installed
+	if !defined(package ["postgresql-client-${postgres_version}"])
+	{
+		package { "postgresql-client-${postgres_version}":
+			ensure => installed
+		}
 	}
 	package { 'sendemail':
 		ensure => installed
 	}
 	# Для получения файлов инициализации postgis-базы:
-	package { 'postgresql-contrib-9.1':
+	package { "postgresql-contrib-${postgres_version}":
 		ensure => installed
 	}
-	package { 'postgis':
-		ensure => installed
+	if !defined(package ['postgis'])
+	{
+		package { 'postgis':
+			ensure => installed
+		}
 	}
-	package { 'osmosis':
-		ensure => installed
+	if !defined(package ['osmosis'])
+	{
+		package { 'osmosis':
+			ensure => installed
+		}
 	}
-	package { 'postgresql-9.1-postgis':
-		ensure => installed
+	if !defined(package ["postgresql-${postgres_version}-postgis"])
+	{
+		package { "postgresql-${postgres_version}-postgis":
+			ensure => installed
+		}
 	}
 	# Демон нам не нужен - отключаем:
-	service {"postgresql":
-		ensure => stopped,
-		enable => false,
-		require => package['postgresql-contrib-9.1'],
-	}
+	#service {"postgresql":
+	#	ensure => stopped,
+	#	enable => false,
+	#	require => package['postgresql-contrib-9.1'],
+	#	status => 'test 0 != `ps aux|grep postgres|grep -v grep|wc -l`',
+	#}
 
 	file { "/opt/osm":
 		ensure => directory,
@@ -148,14 +215,14 @@ class osm-render-server ($db_host="db.rs.int", $db_port="5432", $db_user="openst
 	file_line { 'site vhost':
 		ensure  => present,
 		path  => '/etc/apache2/sites-available/tileserver_site.conf',
-		line  => '<VirtualHost tile.osm.prim.drsk.ru:80>',
+		line  => "<VirtualHost ${tile_render_domain}:80>",
 		match => '^ *<VirtualHost ',
 		require => package['libapache2-mod-tile']
 	}
 	file_line { 'site alias':
 		ensure  => present,
 		path  => '/etc/apache2/sites-available/tileserver_site.conf',
-		line  => '    ServerAlias tile.osm.prim.drsk.ru a.tile.openstreetmap.org b.tile.openstreetmap.org c.tile.openstreetmap.org osm-render.rs.int',
+		line  => "    ServerAlias ${tile_render_domain} a.tile.openstreetmap.org b.tile.openstreetmap.org c.tile.openstreetmap.org osm-render.rs.int",
 		match => '^ *ServerAlias',
 		require => file_line['site name'],
 	}
@@ -276,8 +343,11 @@ class osm-render-server ($db_host="db.rs.int", $db_port="5432", $db_user="openst
 	}
 	service { "renderd":
 		ensure => "running",
-		subscribe => file [ '/etc/renderd.conf' ],
-		restart => true,
+		#subscribe => file [ '/etc/renderd.conf' ],
+		#restart => true,
+		status => 'test 0 != `/bin/ps aux|/bin/grep renderd|/bin/grep -v grep|/usr/bin/wc -l`',
+		#status => 'test 0 == 0 ',
+		#status => '/bin/true',
 	}
 	service { "apache2":
 		ensure => "running",
@@ -370,6 +440,24 @@ class osm-render-server ($db_host="db.rs.int", $db_port="5432", $db_user="openst
 		require => file['/opt/osm/kothic/kothic_size.patch'],
 		onlyif => "test 0 -eq \"$(fgrep 'str(int(float(size.split' /opt/osm/kothic/src/libkomapnik.py|wc -l)\"",
 	}
+	# Правим ошибку параметра 'dash' для рисования прерывистых линий. На самом деле это какой-то хак, как сделать правильно - я не разбирался особо:
+	file { "/opt/osm/kothic/kothic_dash.patch":
+		ensure => file,
+		source => "puppet:///modules/osm-render-server/kothic_dash.patch",
+		replace => yes,
+		mode => 0644,
+		owner => root,
+		group => root,
+		backup => false,
+		require => exec ['git_kothic'],
+	}
+	exec { "patch dash kothic":
+		path   => "/usr/bin:/usr/sbin:/bin",
+		command => "patch -p1 < /opt/osm/kothic/kothic_dash.patch",
+		cwd => "/opt/osm/kothic",
+		require => file['/opt/osm/kothic/kothic_dash.patch'],
+		onlyif => "test 0 -eq \"$(fgrep 'if len(dashes) == 2' /opt/osm/kothic/src/libkomapnik.py|wc -l)\"",
+	}
 
 	# Правим конфиг kothic:
 	file { "/opt/osm/kothic/src/komap.conf":
@@ -380,14 +468,14 @@ class osm-render-server ($db_host="db.rs.int", $db_port="5432", $db_user="openst
 		owner => root,
 		group => root,
 		backup => true,
-		require => exec ['patch auth kothic'],
+		require => [ exec ['patch auth kothic'], exec ['patch dash kothic'], exec ['patch size kothic'] ]
 	}
 
 	# =========== частный наш случай сборки стилей и конфига tilecache =============
 	# Генерируем конфиг tilecache из наших стилей ():
 	exec { "git_drsk_osm_map_styles":
 		path   => "/usr/bin:/usr/sbin:/bin",
-		command => "git clone https://github.com/progserega/osm_power_mapcss_styles.git",
+		command => "git clone http://git.rs.int/osm/drsk_osm_map_styles.git",
 		cwd => "/opt/osm",
 		creates => "/opt/osm/drsk_osm_map_styles",
 		require => file['/opt/osm/kothic/src/komap.conf']
@@ -419,9 +507,9 @@ class osm-render-server ($db_host="db.rs.int", $db_port="5432", $db_user="openst
 	}
 	#===============================================================================
 	# Конфиг апача для tilecache:
-	file { "/etc/apache2/sites-available/wms.osm.prim.drsk.ru.conf":
+	file { "/etc/apache2/sites-available/${wms_render_domain}.conf":
 		ensure => file,
-		source => "puppet:///modules/osm-render-server/wms.osm.prim.drsk.ru.conf",
+		content => template("osm-render-server/wms-apache.conf.erb"),
 		replace => yes,
 		mode => 0644,
 		owner => root,
@@ -441,9 +529,9 @@ class osm-render-server ($db_host="db.rs.int", $db_port="5432", $db_user="openst
 	}
 	exec { "enable wms-site":
 		path   => "/usr/bin:/usr/sbin:/bin",
-		command => "a2ensite wms.osm.prim.drsk.ru.conf && service apache2 reload",
-		creates => "/etc/apache2/sites-enabled/wms.osm.prim.drsk.ru.conf",
-		require => file['/etc/apache2/sites-available/wms.osm.prim.drsk.ru.conf'],
+		command => "a2ensite ${wms_render_domain}.conf && service apache2 reload",
+		creates => "/etc/apache2/sites-enabled/${wms_render_domain}.conf",
+		require => file["/etc/apache2/sites-available/${wms_render_domain}.conf"],
 	}
 	file { "/var/www/tilecache/":
 		ensure => directory,
@@ -488,7 +576,7 @@ class osm-render-server ($db_host="db.rs.int", $db_port="5432", $db_user="openst
 	# Копируем тестовую страничку для тестирования нашего сервера:
 	file { "/var/www/index.html":
 		ensure => file,
-		source => "puppet:///modules/osm-render-server/test_render_view_openlayer_web.html",
+		content => template("osm-render-server/test_render_view_openlayer_web.html.erb"),
 		replace => yes,
 		mode => 0644,
 		owner => root,
@@ -518,6 +606,7 @@ class osm-render-server ($db_host="db.rs.int", $db_port="5432", $db_user="openst
 		group => root,
 		backup => false,
 	}
+
 	file { "/opt/osm/scripts/update_drsk_gis_from_remoute_diff.sh":
 		ensure => file,
 		content => template("osm-render-server/update_drsk_gis_from_remoute_diff.sh.erb"),
@@ -540,7 +629,20 @@ class osm-render-server ($db_host="db.rs.int", $db_port="5432", $db_user="openst
 	file { "/etc/cron.d/osm_update_drsk_gis":
 		ensure => file,
 		content => "# обновление drsk_gis с удалённого сервера:
-40 * * * * root [ -z \"`ps aux|grep update_drsk_gis_from_remoute_diff.sh|grep -v grep`\" ] && /opt/osm/scripts/update_drsk_gis_from_remoute_diff.sh
+25 * * * * root [ -z \"`ps aux|grep update_drsk_gis_from_remoute_diff.sh|grep -v grep`\" ] && /opt/osm/scripts/update_drsk_gis_from_remoute_diff.sh
+55 * * * * root [ -z \"`ps aux|grep update_drsk_gis_from_remoute_diff.sh|grep -v grep`\" ] && /opt/osm/scripts/update_drsk_gis_from_remoute_diff.sh
+",
+		replace => yes,
+		mode => 0644,
+		owner => root,
+		group => root,
+		backup => false,
+	}
+	# Задание по миграции данных из OSM-базы в postgis-базу из полного дампа (для исключения сбоев):
+	file { "/etc/cron.d/osm_update_drsk_gis_from_ful_dump":
+		ensure => file,
+		content => "# обновление drsk_gis с удалённого сервера:
+30 23 * * * root [ -z \"`ps aux|grep update_drsk_gis_from_remoute_diff.sh|grep -v grep`\" ] && /opt/osm/scripts/corp_osm2corp_gis_from_full_remote_dump.sh
 ",
 		replace => yes,
 		mode => 0644,

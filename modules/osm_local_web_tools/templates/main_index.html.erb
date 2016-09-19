@@ -1,0 +1,59 @@
+<html>
+<HEAD>
+<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=utf-8">
+<TITLE>Утилиты OSM</TITLE>
+<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.1  (Linux)">
+<META NAME="AUTHOR" CONTENT="Сергей Семёнов">
+<META NAME="CREATED" CONTENT="20100319;10431100">
+<META NAME="CHANGEDBY" CONTENT="Сергей Семёнов">
+<META NAME="CHANGED" CONTENT="20100319;10441400">
+<STYLE TYPE="text/css">
+<!--
+@page { size: 21cm 29.7cm; margin: 2cm }
+P { margin-bottom: 0.21cm }
+-->
+</STYLE>
+
+<style>
+.normaltext {
+}
+</style>
+<style>
+.ele_null {
+color: red; /* Красный цвет выделения */
+}
+</style>
+<style>
+.selected_node {
+color: green; /* Зелёный цвет выделения */
+background: #D9FFAD;
+font-size: 150%;
+}
+</style>
+
+</HEAD>
+
+<body><h1>Утилиты сервиса OSM</h1>
+<p>1. Добавление имени ВЛ или подстанции в список, по которому проверяется правильность оформления входных данных в GPX ( для отправки на osm_import@rsprim.ru ) производится 
+<a target="_self" href="<%= @add_new_vl_name_url %>">по ссылке</a>
+</p>
+<p>2. Текущий список наименований линий ВЛ и подстанций, по которым сверяется обработчик данных, присылаемых на osm_import@rsprim.ru находится
+<a target="_self" href="<%= @list_name_vl_url %>">по ссылке</a>
+</p>
+<p>3. Список подстанций на карте с ссылками на карту (список генерируется при нажатии по ссылке - открывается не сразу)
+<a target="_self" href="<%= @map_power_station_list_url %>">по ссылке</a>
+</p>
+<p>4. Список ТП на карте с ссылками на карту (список генерируется при нажатии по ссылке - открывается очень медленно, нужно подождать)
+<a target="_self" href="<%= @tp_station_list_url %>">по ссылке</a>
+</p>
+<p>5. Список линий и опор, высота оснований которых равна 0:
+<a target="_self" href="<%= @lines_with_zero_altitude_url %>">по ссылке</a>
+</p>
+<p>6. Список объектов ДРСК, рядом с которыми замечены пожары:
+<a target="_self" href="<%= @fires_url %>">по ссылке</a>
+</p>
+<p>7. Расчёт векторной диаграммы тока нулевого провода:
+<a target="_self" href="<%= @vector_url %>">по ссылке</a>
+</p>
+
+</body></html>

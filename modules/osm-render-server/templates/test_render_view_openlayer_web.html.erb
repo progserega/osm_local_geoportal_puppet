@@ -1,0 +1,423 @@
+<!-- Managed by Puppet. Do not manualy edit. -->
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Карта объектов ОАО "ДРСК"</title>
+<script
+src="http://openlayers.org/api/OpenLayers.js"></script>
+</head>
+<body>
+<div style="width:100%; height:100%" id="map"></div>
+
+<script defer="defer" type="text/javascript">
+
+var map = null;
+var shade = null;
+var maxOpacity = 0.9;
+var minOpacity = 0.1;
+
+options = {controls:[
+/*new OpenLayers.Control.LayerSwitcher(),
+*/
+new OpenLayers.Control.Navigation(),
+new OpenLayers.Control.PanZoomBar(),
+new OpenLayers.Control.LayerSwitcher({'ascending':false}),
+//new OpenLayers.Control.Permalink(),
+new OpenLayers.Control.ScaleLine(),
+new OpenLayers.Control.Permalink('Ссылка на текущую карту'),
+//new OpenLayers.Control.MousePosition(),
+new OpenLayers.Control.MousePosition({
+        displayProjection: new OpenLayers.Projection('EPSG:4326')}),
+new OpenLayers.Control.OverviewMap(),
+new OpenLayers.Control.KeyboardDefaults()
+]};
+options = OpenLayers.Util.extend({
+maxExtent: new OpenLayers.Bounds(-20037508.34,
+-20037508.34,20037508.34,20037508.34),
+maxResolution: 156543.0339,
+units: "m",
+//projection: "EPSG:900913"//,
+projection: "EPSG:3857"//,
+//transitionEffect: "resize"
+}, options);
+
+var map = new OpenLayers.Map('map', options);
+
+var osm = new OpenLayers.Layer.WMS( "Районное деление", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'admin_levels', 
+transparent: 'true', 
+format: 'png'},
+{isBaseLayer: false, opacity: 0.5});
+map.addLayer(osm);
+osm.setVisibility(false);
+
+var osm = new OpenLayers.Layer.WMS( "Карта OSM (прозрачный слой)", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'osm', 
+transparent: 'true', 
+format: 'png'},
+{isBaseLayer: false, opacity: 0.5});
+map.addLayer(osm);
+osm.setVisibility(false);
+
+/*
+var drsk_transp = new OpenLayers.Layer.WMS( "Объекты ОАО ДРСК (прозрачный слой)", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 0.7});
+map.addLayer(drsk_transp);
+drsk_transp.setVisibility(false);
+*/
+
+// ============== Новые слои ======================
+// drsk_line_110 
+// drsk_line_35 
+// drsk_line_10 
+// drsk_line_6
+// drsk_line_0_4
+
+// =============== Охранные зоны ==================
+
+// drsk_station
+var drsk_line_ohran_zones = new OpenLayers.Layer.WMS( "Охранные зоны линий", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_line_ohran_zones', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 0.3});
+map.addLayer(drsk_line_ohran_zones);
+drsk_line_ohran_zones.setVisibility(false);
+//drsk_station.setVisibility(false);
+
+var drsk_station_ohran_zones = new OpenLayers.Layer.WMS( "Охранные зоны подстанций", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_station_ohran_zones', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 0.3});
+map.addLayer(drsk_station_ohran_zones);
+drsk_station_ohran_zones.setVisibility(false);
+//drsk_station.setVisibility(false);
+
+// =============== Подстанции ==================
+// drsk_station
+var drsk_station = new OpenLayers.Layer.WMS( "Подстанции", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_station', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 1});
+map.addLayer(drsk_station);
+//drsk_station.setVisibility(false);
+
+// =============== Подстанции ==================
+// drsk_fider_color
+var drsk_fider_color = new OpenLayers.Layer.WMS( "Фидеры разных цветов", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_fider_color', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 1});
+map.addLayer(drsk_fider_color);
+//drsk_fider_color.setVisibility(false);
+
+// =============== ТП и КТП ==================
+// drsk_tp
+var drsk_tp = new OpenLayers.Layer.WMS( "ТП и КТП", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_tp', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 1});
+map.addLayer(drsk_tp);
+//drsk_tp.setVisibility(false);
+
+// =============== Загрузка ТП и КТП ==================
+// drsk_tp
+var drsk_tp_usage = new OpenLayers.Layer.WMS( "Загрузка ТП и КТП", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_power_tp_usage', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 1});
+map.addLayer(drsk_tp_usage);
+//drsk_tp.setVisibility(false);
+
+// =============== Загрузка Подстанций ==================
+// drsk_tp
+var drsk_station_usage = new OpenLayers.Layer.WMS( "Загрузка подстанций", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_power_usage', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 1});
+map.addLayer(drsk_station_usage);
+//drsk_tp.setVisibility(false);
+
+// =============== Опоры ==================
+// drsk_tower
+var drsk_tower = new OpenLayers.Layer.WMS( "Опоры", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_tower', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 1});
+map.addLayer(drsk_tower);
+//drsk_tower.setVisibility(false);
+
+// =============== ЛЭП ==================
+
+// drsk_line_construction
+var drsk_line_construction = new OpenLayers.Layer.WMS( "Строящиеся линии, планируемые к постройке", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_line_construction', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 1});
+map.addLayer(drsk_line_construction);
+drsk_line_construction.setVisibility(false);
+
+// drsk_objects_error
+var drsk_objects_error = new OpenLayers.Layer.WMS( "Объекты с ошибками (без указанного напряжения и др.)", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_objects_error', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 1});
+map.addLayer(drsk_objects_error);
+//drsk_objects_error.setVisibility(false);
+
+// drsk_line_0_4
+var drsk_line_0_4 = new OpenLayers.Layer.WMS( "Линии 0.4 кВ", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_line_0_4', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 1});
+map.addLayer(drsk_line_0_4);
+//drsk_line_0_4.setVisibility(false);
+
+// drsk_line_6
+var drsk_line_6 = new OpenLayers.Layer.WMS( "Линии 6 кВ", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_line_6', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 1});
+map.addLayer(drsk_line_6);
+//drsk_line_6.setVisibility(false);
+
+// drsk_line_10
+var drsk_line_10 = new OpenLayers.Layer.WMS( "Линии 10 кВ", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_line_10', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 1});
+map.addLayer(drsk_line_10);
+//drsk_line_10.setVisibility(false);
+
+// drsk_line_35
+var drsk_line_35 = new OpenLayers.Layer.WMS( "Линии 35 кВ", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_line_35', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 1});
+map.addLayer(drsk_line_35);
+//drsk_line_35.setVisibility(false);
+
+// drsk_line_110
+var drsk_line_110 = new OpenLayers.Layer.WMS( "Линии 220-110 кВ", 
+"http://<%= @wms_render_domain %>/tilecache.cgi?", 
+//"http://mapbender.wheregroup.com/cgi-bin/mapserv?",
+//"http://toolserver.org/~cmarqu/hill?",
+{ layers: 'drsk_line_110', 
+transparent: 'true', 
+reaspect: "false",
+format: 'png'},
+{isBaseLayer: false, opacity: 1});
+map.addLayer(drsk_line_110);
+//drsk_line_110.setVisibility(false);
+//============== POI =======================
+geographic = new OpenLayers.Projection("EPSG:4326");
+mercator = new OpenLayers.Projection("EPSG:900913");
+var poi = new OpenLayers.Layer.Vector("Описание объектов", {
+strategies: [new OpenLayers.Strategy.BBOX({resFactor: 1.1})],
+projection: geographic,
+protocol: new OpenLayers.Protocol.HTTP({
+url: "poi_descriptions.txt",
+format: new OpenLayers.Format.Text()
+})
+});
+map.addLayer(poi);
+poi.setVisibility(false);
+
+// Interaction; not needed for initial display.
+selectControl = new OpenLayers.Control.SelectFeature(poi);
+map.addControl(selectControl);
+selectControl.activate();
+poi.events.on({
+'featureselected': onFeatureSelect,
+'featureunselected': onFeatureUnselect
+});
+
+// Needed only for interaction, not for the display.
+function onPopupClose(evt) {
+// 'this' is the popup.
+var feature = this.feature;
+if (feature.poi) { // The feature is not destroyed
+selectControl.unselect(feature);
+} else { // After "moveend" or "refresh" events on POIs layer all 
+//     features have been destroyed by the Strategy.BBOX
+this.destroy();
+}
+}
+function onFeatureSelect(evt) {
+feature = evt.feature;
+popup = new OpenLayers.Popup.FramedCloud("featurePopup",
+feature.geometry.getBounds().getCenterLonLat(),
+new OpenLayers.Size(600,600),
+"<h2>"+feature.attributes.title + "</h2>" +
+feature.attributes.description,
+null, true, onPopupClose);
+feature.popup = popup;
+popup.feature = feature;
+map.addPopup(popup, true);
+}
+function onFeatureUnselect(evt) {
+feature = evt.feature;
+if (feature.popup) {
+popup.feature = null;
+map.removePopup(feature.popup);
+feature.popup.destroy();
+feature.popup = null;
+}
+}
+
+// ================ POI end =================================
+
+var kadastre_transp = new OpenLayers.Layer.WMS( "Кадастр (прозрачный слой)", 
+//"http://maps.rosreestr.ru/arcgis/services/CadastreNew/CadastreWMS/MapServer/WMSServer?",
+"http://maps.rosreestr.ru/arcgis/rest/services/Cadastre/CadastreSelected/MapServer/export?",
+//http://maps.rosreestr.ru/arcgis/rest/services/Cadastre/CadastreSelected/MapServer/export?bbox=14688750.849461%2C5329495.3594138%2C14689056.597574%2C5329801.1075269&bboxSR=&layers=1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C11%2C12%2C13%2C14%2C15%2C16%2C17%2C18%2C19&layerDefs=&size=&imageSR=&format=png&transparent=true&dpi=&time=&layerTimeOptions=&dynamicLayers=&gdbVersion=&mapScale=&f=image
+{ 
+layers: '1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19',
+transparent: 'true', 
+version: '1.3.0',
+//format: 'png'},
+f: 'image'},
+{isBaseLayer: false, opacity: 0.7});
+map.addLayer(kadastre_transp);
+kadastre_transp.setVisibility(false);
+
+/*
+var rr_wms = new OpenLayers.Layer.WMS( "RR WMS",        
+"http://maps.rosreestr.ru/arcgis/services/CadastreNew/CadastreWMS/MapServer/WMSServer?",
+//http://maps.rosreestr.ru/arcgis/services/CadastreNew/CadastreWMS/MapServer/WMSServer?service=WMS&request=GetMap&version=1.3.0&layers=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19&styles=&format=image/png8&transparent=true&height=256&width=256&crs=EPSG:3857&bbox=4177742.2179545932,7504281.688925464,4182634.1877648444,7509173.658735716
+{ 
+layers='1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20',
+format: 'image/png8',
+transparent: true
+}
+);
+map.addLayer(rr_wms);
+*/
+
+
+var local_osm = new OpenLayers.Layer.XYZ(
+"Карта OSM (openstreetmap.ru)",
+//"http://tile.openstreetmap.de/tiles/osmde/${z}/${x}/${y}.png",
+//"http://gpw.rs.int/tilecache/tilecache.cgi/1.0.0/drsk/${z}/${x}/${y}.png",
+"http://tile.osm.prim.drsk.ru/osm/${z}/${x}/${y}.png",
+{
+numZoomLevels: 19, 
+transparent: 'true', 
+sphericalMercator: true
+}
+);
+map.addLayers([local_osm]);
+local_osm.setVisibility(true);
+
+/*
+var drsk = new OpenLayers.Layer.XYZ(
+"Объекты ОАО ДРСК",
+//"http://tile.openstreetmap.de/tiles/osmde/${z}/${x}/${y}.png",
+//"http://gpw.rs.int/tilecache/tilecache.cgi/1.0.0/drsk/${z}/${x}/${y}.png",
+"http://tile.osm.prim.drsk.ru/drsk/${z}/${x}/${y}.png",
+{
+numZoomLevels: 18, 
+transparent: 'true', 
+sphericalMercator: true
+}
+);
+map.addLayers([drsk]);
+drsk.setVisibility(false);
+*/
+
+var apiKey = "AjDu1UQMBaWdaSSxl_3na2DAEPQVrlYieqmfJjW-K94CA7JwT3BYxa9VnoIucDyv";
+var bing = new OpenLayers.Layer.Bing({
+name: "Спутниковые снимки",
+key: apiKey,
+transparent: 'true', 
+type: "Aerial"}
+);
+map.addLayer(bing);
+
+</script>
+
+</body>
+</html>
+

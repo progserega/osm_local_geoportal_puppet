@@ -1,0 +1,18 @@
+diff -ruN kothic.orig/src/libkomapnik.py kothic.new/src/libkomapnik.py
+--- kothic.orig/src/libkomapnik.py	2015-04-29 16:25:08.000000000 +1000
++++ kothic.new/src/libkomapnik.py	2015-05-14 14:04:38.000000000 +1000
+@@ -100,7 +100,12 @@
+     linecap = {"none": "butt", }.get(linecap.lower(), linecap)
+ 
+     if dashes:
+-        dashes = 'stroke-dasharray="' + str(dashes).strip('[]') + '"'
++        if len(dashes) == 2:
++            dashes = 'stroke-dasharray="' + "%.0f" % dashes[0] + '.' + "%.0f" % dashes[1] + '"'
++        elif len(dashes) == 1:
++            dashes = 'stroke-dasharray="' + "%.0f" % dashes[0] + '.' + "%.0f" % dashes[0] + '"'
++        else:
++            dashes = 'stroke-dasharray="' + str(dashes).strip('[]') + '"'
+     else:
+         dashes = ""
+ 
+Binary files kothic.orig/src/libkomapnik.pyc and kothic.new/src/libkomapnik.pyc differ

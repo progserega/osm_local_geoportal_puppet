@@ -1,0 +1,23 @@
+#!/bin/bash
+# Скачиваем дамп DRSK-данных:
+log="<%= @log_path %>"
+
+echo "`date +%Y.%m.%d-%T`: ============= start $0 ================" >> "${log}"
+
+rm "<%= @import_data_file_osm_gz %>"
+wget -c "<%= @drsk_osm_url %>" -O "<%= @import_data_file_osm_gz %>"
+
+if [ 0 != $? ]
+then
+	echo "`date +%Y.%m.%d-%T`: $0: ERROR 'wget -c \"<%= @drsk_osm_url %>\" -O \"<%= @import_data_file_osm_gz %>\"'" >> "${log}"
+fi
+
+# Конвертируем объекты в точки, которые отображаются osmand-ом:
+#zcat <%= @import_data_file_osm_gz %> | sed 's/k="power" v="station"/k="power" v="generator"/g;s/k="power" v="sub_station"/k="power" v="generator"/g' > <%= @import_data_file_osm %>
+zcat <%= @import_data_file_osm_gz %> | sed 's/k="power" v="cable"/k="power" v="line"/g' > <%= @import_data_file_osm %>
+#zcat <%= @import_data_file_osm_gz %> > <%= @import_data_file_osm %>
+<%= @osmconvert %> <%= @import_data_file_osm %> --out-pbf -o="<%= @import_data_file_pbf %>"
+if [ 0 != $? ]
+then
+	echo "`date +%Y.%m.%d-%T`: $0: ERROR '<%= @osmconvert %> <%= @import_data_file_osm %> --out-pbf -o=\"<%= @import_data_file_pbf %>\"'" >> "${log}"
+fi

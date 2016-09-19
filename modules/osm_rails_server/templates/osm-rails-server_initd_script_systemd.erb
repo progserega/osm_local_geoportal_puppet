@@ -1,0 +1,115 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          osm-rails-server
+# Required-Start:    $remote_fs $time
+# Required-Stop:     umountnfs $time
+# X-Stop-After:      sendsigs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: OSM API server
+# Description:       OpenStreetMap API server
+### END INIT INFO
+
+#
+# Author:	progserega <semenov@rsprim.ru>
+#
+
+# PATH should only include /usr/* if it runs after the mountnfs.sh script
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+DESC="OSM API server"
+NAME=osm-rails-server
+
+OSM_PATH="<%= @openstreetmap_website_install_path %>"
+DAEMON=<%= @bundle_path %>
+PIDFILE="/var/run/osm_api_server.pid"
+
+SCRIPTNAME=/etc/init.d/$NAME
+
+OSM_SERVER_OPT="exec rails server"
+
+# Exit if the package is not installed
+[ -x "$DAEMON" ] || exit 0
+
+# Read configuration variable file if it is present
+[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+
+# Define LSB log_* functions.
+. /lib/lsb/init-functions
+
+do_start()
+{
+	# Return
+	#   0 if daemon has been started
+	#   1 if daemon was already running
+	#   other if daemon could not be started or a failure occured
+	start-stop-daemon --start -m -p $PIDFILE -b --chdir ${OSM_PATH} --exec ${DAEMON} -- $OSM_SERVER_OPT
+}
+
+do_stop()
+{
+	# Return
+	#   0 if daemon has been stopped
+	#   1 if daemon was already stopped
+	#   other if daemon could not be stopped or a failure occurred
+	start-stop-daemon --stop --quiet --retry=INT/30/KILL/5 --pidfile $PIDFILE --exec $DAEMON
+	sleep 2
+	kill -INT `cat ${PIDFILE}`
+}
+
+sendsigs_omit() {
+	OMITDIR=/run/osm_server.omit.d
+	mkdir -p $OMITDIR
+	ln -sf $PIDFILE $OMITDIR/osm_server
+}
+create_xconsole() {
+	XCONSOLE=/dev/xconsole
+	if [ "$(uname -s)" != "Linux" ]; then
+		XCONSOLE=/run/xconsole
+		ln -sf $XCONSOLE /dev/xconsole
+	fi
+	if [ ! -e $XCONSOLE ]; then
+		mknod -m 640 $XCONSOLE p
+		chown root:adm $XCONSOLE
+		[ -x /sbin/restorecon ] && /sbin/restorecon $XCONSOLE
+	fi
+}
+
+case "$1" in
+  start)
+	log_daemon_msg "Starting $DESC" "$NAME"
+	create_xconsole
+	do_start
+	case "$?" in
+		0) sendsigs_omit
+		   log_end_msg 0 ;;
+		1) log_progress_msg "already started"
+		   log_end_msg 0 ;;
+		*) log_end_msg 1 ;;
+	esac
+
+	;;
+  stop)
+	log_daemon_msg "Stopping $DESC" "$NAME"
+	do_stop
+	case "$?" in
+		0) log_end_msg 0 ;;
+		1) log_progress_msg "already stopped"
+		   log_end_msg 0 ;;
+		*) log_end_msg 1 ;;
+	esac
+
+	;;
+  restart|force-reload)
+	$0 stop
+	$0 start
+	;;
+  status)
+	status_of_proc -p $PIDFILE $DAEMON $NAME && exit 0 || exit $?
+	;;
+  *)
+	echo "Usage: $SCRIPTNAME {start|stop|restart|force-reload|status}" >&2
+	exit 3
+	;;
+esac
+
+:

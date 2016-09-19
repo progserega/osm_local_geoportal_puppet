@@ -1,13 +1,14 @@
 #!/bin/bash
 # Managed by Puppet. Do not edit manualy.
 
-email_success="admin@emailserver.ru"
-email_error_to="admin@emailserver.ru"
-email_server="corp-email-server.ru"
+email_success="abuse@rsprim.ru"
+email_error_to="abuse@rsprim.ru"
+email_server="mail-rsprim-ru.rs.int"
 
 db_name="<%= @db_corp_name %>"
 db_user="<%= @db_user %>"
 db_host="<%= @db_host %>"
+export_server_domain="<%= @export_server_domain %>"
 
 
 log="/var/log/osm/corp_osm2corp_gis_from_full_remote_dump.log"
@@ -78,7 +79,7 @@ cat /dev/null > "${wget_log}"
 
 
 # Скачиваем самый свежий дамп:
-url_dump="http://export.osm.prim.drsk.ru/drsk_osm_full_dump_latest.osm.gz"
+url_dump="http://${export_server_domain}/drsk_osm_full_dump_latest.osm.gz"
 echo "`date +%Y.%m.%d-%T`: Start wget corp OSM dump: ${url_dump} (wget log: $wget_log)" >> ${log}
 
 #mv "$dump" "${dump}_old"
@@ -148,8 +149,15 @@ echo "`date +%Y.%m.%d-%T`: Включаем dict_int, status=$ret_status" >> ${l
 
 # Инициируем базу:
 echo "`date +%Y.%m.%d-%T`: Инициируем базу:" >> ${log}
-shemas="/usr/share/postgresql/9.1/contrib/postgis-1.5/postgis.sql \
-/usr/share/postgresql/9.1/contrib/postgis-1.5/spatial_ref_sys.sql"
+
+postgis_sql="`find  /usr/share/postgresql/ -name postgis.sql`"
+spatial_ref_sys_sql="`find  /usr/share/postgresql/ -name spatial_ref_sys.sql`"
+shemas="${postgis_sql} ${spatial_ref_sys_sql}"
+
+#shemas="/usr/share/postgresql/9.1/contrib/postgis-1.5/postgis.sql \
+#/usr/share/postgresql/9.1/contrib/postgis-1.5/spatial_ref_sys.sql"
+#shemas="/usr/share/postgresql/9.1/contrib/postgis-1.5/postgis.sql \
+#/usr/share/postgresql/9.1/contrib/postgis-1.5/spatial_ref_sys.sql"
 
 #shemas="/usr/share/postgresql-9.0/contrib/hstore.sql \
 #/usr/share/postgresql-9.0/contrib/_int.sql \

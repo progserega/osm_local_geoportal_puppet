@@ -1,0 +1,63 @@
+#!/bin/bash
+db_host="<%= @osm_api_server_db_host %>"
+db_name="<%= @osm_api_server_db_name %>"
+db_user="<%= @osm_api_server_db_user %>"
+db_passwd="<%= @osm_api_server_db_passwd %>"
+
+# Прописываем пароль:
+if [ -f ~/.pgpass ]
+then
+	if [ -z "`fgrep $db_host:5432:$db_name ~/.pgpass`" ]
+	then
+		echo "$db_host:5432:$db_name:$db_user:$db_passwd" >> ~/.pgpass
+	fi
+else
+	echo "$db_host:5432:$db_name:$db_user:$db_passwd" >> ~/.pgpass
+fi
+
+sql_exec="psql -U $db_user -h $db_host $db_name"
+
+echo "====================   Список всех пользователей и их ID:  ======================="
+
+sql="select id,display_name,email,pass_crypt from users;"
+
+echo "${sql}"|$sql_exec
+
+echo "====================   Список НЕзаблокированных пользователей и их ID:  ======================="
+
+sql="select id,display_name,email,pass_crypt from users where id not in (select user_id from user_blocks);"
+
+echo "${sql}"|$sql_exec
+
+
+echo "====================   Список текущих запретов (банов):======================"
+
+sql="select users.id,users.display_name,users.email,user_blocks.reason,user_blocks.ends_at,user_blocks.created_at from user_blocks,users where users.id=user_blocks.user_id;"
+
+echo "${sql}"|$sql_exec
+
+echo "Введите ID пользователя для запрета (бана):"
+read id_to_ban
+echo "Введите причину бана:"
+read reason
+echo "Введите дату окончания бана в формате: ГГГГ-ММ-ДД ЧЧ:ММ:СС, например: '2099-01-01 00:00:01' (одинарные кавычки вводить не надо)"
+read ends_at
+
+sql="insert into user_blocks(user_id,creator_id,reason, ends_at, needs_view,created_at ) values($id_to_ban,1,'$reason',DATE('$ends_at'),true, NOW());"
+
+echo "${sql}"|$sql_exec
+
+if [ 0 != $? ]
+then
+	echo "error add ban!"
+	exit 1
+fi
+
+echo "====================   Список текущих запретов (банов):======================"
+
+sql="select users.id,users.display_name,users.email,user_blocks.reason,user_blocks.ends_at,user_blocks.created_at from user_blocks,users where users.id=user_blocks.user_id;"
+
+echo "${sql}"|$sql_exec
+
+
+

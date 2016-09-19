@@ -1,0 +1,118 @@
+﻿#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#
+# STAPIO CONFIGURATION
+#
+
+# ! все пути до каталога должны оканчиватся на '/'
+
+# global
+format_datetime = '%Y-%m-%d %H:%M:%S'
+
+stapio_dir = '<%= @install_path %>/stapio/'
+
+file_log = 'stapio_run.log'
+workdir = stapio_dir # путь до каталога stapio (путь в конце с /)
+workactual = stapio_dir + '/actual/' # путь до каталога дат актуализации данных (путь в конце с /)
+logdir = stapio_dir + '/log/' # путь до каталога логов stapio (путь в конце с /)
+tempdir = '/tmp/stapio/' # путь до каталога временных файлов, в основном osmosis-а (путь в конце с /)
+authFileOsmosis = stapio_dir + '/.auth_osmosis' # файл аутентификации postgresql
+runAfter = '' # команда выпоняемая после работы, например очистка temp файлов после работы osmosis
+
+
+# sphinx
+#sphinx_reindex = True # делать реиндекс сфинкса по окончании работы
+sphinx_reindex = False # делать реиндекс сфинкса по окончании работы
+cmdindexrotate = 'indexer --all --rotate' # строка реиндекса
+
+
+# osmCatalog
+osm_catalog = '<%= @install_path %>/osmCatalog/'
+file_catalog_json = osm_catalog + '/catalog.json' # catalog.json
+path_dictionary_json = osm_catalog + '/dictionary/' # путь до dictionary (путь в конце с /)
+#file_tree_json = '/opt/osm/openstreetmap.ru/OpenStreetMap.ru/www/data/poidatatree.json' # poidatatree.json (обычно stapio/poi/poidatatree.json)
+file_tree_json = '<%= @out_poidatatree_json_file %>' # poidatatree.json (обычно stapio/poi/poidatatree.json)
+file_marker_json = '<%= @out_poimarker_json_file %>' # poimarker.json (обычно stapio/poi/poimarker.json)
+#path_markers = '/osm.ru/www/img/poi_marker/' # путь до иконок маркеров poi_marker (для генерации poimarker.json)
+#path_markers = osm_catalog + 'poi_marker/' # путь до иконок маркеров poi_marker (для генерации poimarker.json)
+path_markers = '<%= @path_markers %>' # путь до иконок маркеров poi_marker (для генерации poimarker.json)
+#file_listPerm_json = stapio_dir + '/poi/poidatalistperm.json' # poidatalistperm.json (обычно stapio/poi/poidatalistperm.json)
+#file_listPerm_json = '/opt/osm/openstreetmap.ru/OpenStreetMap.ru/www/data/poidatalistperm.json' # poidatalistperm.json (обычно stapio/poi/poidatalistperm.json)
+file_listPerm_json = '<%= @out_file_listPerm_json %>' # poidatalistperm.json (обычно stapio/poi/poidatalistperm.json)
+
+
+# addr config
+use_country = True # *old*
+use_addr_save = True # использовать сохраненные данные по странам и регионам (область, край, ...)
+
+
+# load file
+urlpbf = ['<%= @urlpbf_src %>']
+#urlpbf = ['http://172.21.251.23/osm_dump/drsk_osm.pbf']
+#urlpbf = ['http://be.gis-lab.info/data/osm_dump/dump/latest/RU-PRI.osm.pbf']
+#urlpbf = ['http://data.gis-lab.info/osm_dump/dump/latest/RU-KGD.osm.pbf']
+#urlpbf = ['http://data.gis-lab.info/osm_dump/dump/latest/RU.osm.pbf', 'http://data.gis-lab.info/osm_dump/dump/latest/UA.osm.pbf', 'http://data.gis-lab.info/osm_dump/dump/latest/BY.osm.pbf']
+
+urlpbfmeta = '<%= @urlpbf_meta_src %>'
+#urlpbfmeta = 'http://be.gis-lab.info/data/osm_dump/dump/latest/RU-PRI.osm.pbf.meta'
+#urlpbfmeta = 'http://data.gis-lab.info/osm_dump/dump/latest/RU-KGD.osm.pbf.meta'
+# urlpbfmeta = 'http://data.gis-lab.info/osm_dump/dump/latest/RU.osm.pbf.meta'
+
+urlmaskosc = ['http://data.gis-lab.info/osm_dump/diff/RU/RU-%(daystart)s-%(dayend)s.osc.gz','http://data.gis-lab.info/osm_dump/diff/UA/UA-%(daystart)s-%(dayend)s.osc.gz','http://data.gis-lab.info/osm_dump/diff/BY/BY-%(daystart)s-%(dayend)s.osc.gz']
+
+
+# for logger
+write_in_file = True
+write_in_singlefile = True
+singlefile_log = 'singlestapio.log'
+email_send = True
+email_from = 'stapio@<%= @fqdn %>' # stapio@server.ru
+email_to = '<%= @email_admin %>' # ershkus@server.ru
+email_send_finish = False
+smtp_server = '<%= @email_smtp_server %>' # server.ru
+email_pass = '' #
+email_head_error = 'stapio error'
+email_head_finish = 'stapio finish'
+
+
+# utils
+# не сохраняем, т.к. нет нужных таблиц
+saveDateForSite = False
+
+
+# steps
+nodeStep = 2500000
+wayStep = 1000000
+GeomInStep = 5000
+
+
+#
+# DATABASE CONFIGURATION
+#
+
+db_host = "<%= @db_stapio_host %>"
+db_name = "<%= @db_stapio_name %>"
+db_user = "<%= @db_stapio_user %>"
+db_password = "<%= @db_stapio_passwd %>"
+
+addr_table = 'addr'
+addr_p_table = 'addr_p'
+poi_table = 'poi'
+addr_upd_table = 'addr_street_upd'
+deleted_entries_table = 'deleted_entries'
+
+# права на insert, update, delete, select
+addrfull_host = '<%= @db_stapio_host %>'
+#addrfull_database = 'stapio_gis_addr_full'
+addrfull_database = '<%= @db_stapio_name %>'
+addrfull_user = '<%= @db_stapio_user %>'
+addrfull_password = '<%= @db_stapio_passwd %>'
+
+# for saveDateForSite
+# права на insert, update, select (можно только к одной таблице 'config')
+sitefull_host = '<%= @db_prod_host %>'
+sitefull_database = '<%= @db_prod_name %>'
+sitefull_user = '<%= @db_prod_user %>'
+sitefull_password = '<%= @db_prod_passwd %>'
+

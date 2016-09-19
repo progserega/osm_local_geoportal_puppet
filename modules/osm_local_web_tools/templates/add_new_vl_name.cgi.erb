@@ -1,0 +1,41 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import cgi
+import os
+
+
+
+form = cgi.FieldStorage()
+# Поле 'name_vl' содержит не пустое значение:
+if 'name_vl' in form:
+	name_vl = cgi.escape(form['name_vl'].value) + "\n"
+	# "a" - дописывать в конец:
+	f=open("<%= @list_names_of_lines_path %>","a")
+	f.write(name_vl)
+	f.close()
+	#os.system('copy_schema.sh {0} {1} {2} > dev/null 2>$1'.format(user_old, user_name, email))
+	print("""
+<html>
+<head>
+<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>
+<title>ВЛ добавлена!</title>
+</head>
+<body>
+Линия '%s' успешно добавлена в список обработчика импорта линий из GPX-треков. Спасибо!
+</body>
+</html>
+""" % name_vl)
+
+else:
+	print("""
+<html>
+<head>
+<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>
+<title>Ошибка добавления ВЛ!</title>
+</head>
+<body>
+ОШИБКА! Пожалуйста, не забывайте вводить имя линии ВЛ, перед нажатием на кнопку "Отправить запрос"
+</body>
+</html>
+""")
+
